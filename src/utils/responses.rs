@@ -10,7 +10,7 @@ use serde_json::json;
 use super::types::{ApiError, ApiSuccess};
 use crate::models::responses_models::*;
 
-impl IntoResponse for LoginSuccessSchema {
+impl IntoResponse for LoginSuccess {
     fn into_response(self) -> Response {
         let response = json!({
             "message": self.message,
@@ -21,7 +21,7 @@ impl IntoResponse for LoginSuccessSchema {
     }
 }
 
-impl IntoResponse for RegisterSuccessSchema {
+impl IntoResponse for RegisterSuccess {
     fn into_response(self) -> Response {
         let response = json!({
             "message": self.message,
@@ -29,6 +29,27 @@ impl IntoResponse for RegisterSuccessSchema {
         });
         
         (StatusCode::CREATED, Json(response)).into_response()
+    }
+}
+
+impl IntoResponse for GetUserSuccess {
+    fn into_response(self) -> Response {
+        let response = json!({
+            "user": self.user
+        });
+        
+        (StatusCode::OK, Json(response)).into_response()
+    }
+}
+
+impl IntoResponse for GetUsersSuccess {
+    fn into_response(self) -> Response {
+        let response = json!({
+            "users": self.users,
+            "results": self.results
+        });
+        
+        (StatusCode::OK, Json(response)).into_response()
     }
 }
 
@@ -51,6 +72,29 @@ impl IntoResponse for ApiSuccess {
 
             ApiSuccess::AccountValidated => {
                 let response = json!({"message": "Account validated"});
+                (StatusCode::OK, Json(response)).into_response()
+            }
+
+            ApiSuccess::GetUser(get_user_success_schema) => {
+                get_user_success_schema.into_response()
+            }
+
+            ApiSuccess::GetUsers(get_users_success_schema) => {
+                get_users_success_schema.into_response()
+            }
+
+            ApiSuccess::UserUpdated => {
+                let response = json!({"message": "User updated"});
+                (StatusCode::OK, Json(response)).into_response()
+            }
+
+            ApiSuccess::UserDeleted => {
+                let response = json!({"message": "User deleted"});
+                (StatusCode::OK, Json(response)).into_response()
+            }
+
+            ApiSuccess::ProfileUpdated => {
+                let response = json!({"message": "Profile updated"});
                 (StatusCode::OK, Json(response)).into_response()
             }
         }

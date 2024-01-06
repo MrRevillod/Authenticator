@@ -33,6 +33,7 @@ pub async fn sign_jwt(uuid: &String, secret: &String) -> ApiResult<String> {
 }
 
 pub async fn decode_jwt(token: &String, secret: &String) -> ApiResult<String> {
+    
     let token_data = decode::<JwtPayload>(
         token,
         &DecodingKey::from_secret(secret.as_bytes()),

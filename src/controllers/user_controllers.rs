@@ -1,18 +1,17 @@
 
-use serde_json::json;
-
 use axum::{
     extract::Path, 
-    http::StatusCode, 
-    response::IntoResponse, 
     Extension, Json
 };
 
-use crate::models::user_models::UserSchema;
-use crate::utils::types::{ApiState, ApiResponse, ApiError};
+use bcrypt::hash;
+
+use crate::models::responses_models::{GetUserSuccess, GetUsersSuccess};
+use crate::models::user_models::{UserSchema, UpdateUserSchema, UpdateProfileSchema};
+use crate::utils::types::{ApiState, ApiResponse, ApiError, ApiSuccess};
 
 pub async fn get_users_controller(Extension(state): ApiState) -> 
-    ApiResponse<impl IntoResponse, ApiError> {
+    ApiResponse<ApiSuccess, ApiError> {
     
     let users = sqlx::query_as!(UserSchema, r#"SELECT * FROM User"#)
         .fetch_all(&state.db)
@@ -20,14 +19,13 @@ pub async fn get_users_controller(Extension(state): ApiState) ->
 
     match users {
         Ok(users) => {
-            
-            let response = json!({
-                "message": "OK",
-                "users": users,
-                "results": users.len()
-            });
 
-            Ok((StatusCode::OK, Json(response)))
+            let json_response = GetUsersSuccess {
+                results: users.len(),
+                users,
+            };
+
+            Ok(ApiSuccess::GetUsers(json_response))
         }
 
         Err(_) => return Err(ApiError::UnexpectedError),
@@ -35,7 +33,7 @@ pub async fn get_users_controller(Extension(state): ApiState) ->
 }
 
 pub async fn get_user_controller(Extension(state): ApiState, 
-    Path(uuid): Path<String>) -> ApiResponse<impl IntoResponse, ApiError> {
+    Path(uuid): Path<String>) -> ApiResponse<ApiSuccess, ApiError> {
 
     let user = sqlx::query_as!(
         UserSchema,
@@ -52,26 +50,93 @@ pub async fn get_user_controller(Extension(state): ApiState,
                 return Err(ApiError::UserNotFound)
             }
 
-            let single_user = &user[0];
-            let response = json!({"message": "OK", "user": single_user});
-            return Ok((StatusCode::OK, Json(response)))
+            let json_response = GetUserSuccess {
+                user: user[0].clone(),
+            };
+
+            return Ok(ApiSuccess::GetUser(json_response))
         }
 
         Err(_) => return Err(ApiError::UserNotFound),
     }
 }
 
-pub async fn update_user_controller() -> impl IntoResponse {
-    let res = json!({ "message": "user update success" });
-    Json(res)
+pub async fn update_user_controller(Extension(state): ApiState, Path(uuid): 
+    Path<String>, Json(body): Json<UpdateUserSchema>) -> ApiResponse<ApiSuccess, ApiError> {
+
+    let update = sqlx::query!(
+        r#"UPDATE User SET username = ?, email = ?, password = ?, role = ?, 
+           validated = ? WHERE uuid = ?"#,
+        body.username,
+        body.email,
+        body.password,
+        body.role,
+        body.validated,
+        uuid.to_string()
+    )
+    .execute(&state.db)
+    .await
+    .map_err(|_| ApiError::UnexpectedError);
+
+    if let Err(_) = update {
+        return Err(ApiError::UnexpectedError)
+    }
+    
+    if update.unwrap().rows_affected() == 0 {
+        return Err(ApiError::UserNotFound);
+    }
+
+    return Ok(ApiSuccess::UserUpdated)
 }
 
-pub async fn update_profile_controller() -> impl IntoResponse {
-    let res = json!({ "message": "profile update success" });
-    Json(res)
+pub async fn update_profile_controller(Extension(state): ApiState, Path(uuid): 
+    Path<String>, Json(body): Json<UpdateProfileSchema>) -> ApiResponse<ApiSuccess, ApiError> {
+
+    let password = match hash(&body.password, 6) {
+        Ok(password) => password,
+        Err(_) => return Err(ApiError::UnexpectedError),
+    };
+
+    let update = sqlx::query!(
+        r#"UPDATE User SET username = ?, email = ?, password = ? WHERE uuid = ?"#,
+        body.username,
+        body.email,
+        password,
+        uuid.to_string()
+    )
+    .execute(&state.db)
+    .await
+    .map_err(|_| ApiError::UnexpectedError);
+
+    if let Err(_) = update {
+        return Err(ApiError::UnexpectedError)
+    }
+
+    if update.unwrap().rows_affected() == 0 {
+        return Err(ApiError::UserNotFound);
+    }
+
+    return Ok(ApiSuccess::ProfileUpdated)
 }
 
-pub async fn delete_user_controller() -> impl IntoResponse {
-    let res = json!({ "message": "user deleted" });
-    Json(res)
+pub async fn delete_user_controller(Extension(state): ApiState, Path(uuid): 
+    Path<String>) -> ApiResponse<ApiSuccess, ApiError> {
+
+    let delete = sqlx::query!(
+        r#"DELETE FROM User WHERE uuid = ?"#,
+        uuid.to_string()
+    )
+    .execute(&state.db)
+    .await
+    .map_err(|_| ApiError::UnexpectedError);
+
+    if let Err(_) = delete {
+        return Err(ApiError::UnexpectedError)
+    }
+
+    if delete.unwrap().rows_affected() == 0 {
+        return Err(ApiError::UserNotFound);
+    }
+
+    return Ok(ApiSuccess::UserDeleted)
 }

@@ -19,10 +19,15 @@ pub type ApiState = Extension<Arc<AppState>>;
 
 #[derive(Debug)]
 pub enum ApiSuccess {
-    Register(RegisterSuccessSchema),
-    Login(LoginSuccessSchema),
+    Register(RegisterSuccess),
+    Login(LoginSuccess),
     Logout,
     AccountValidated,
+    GetUser(GetUserSuccess),
+    GetUsers(GetUsersSuccess),
+    UserUpdated,
+    UserDeleted,
+    ProfileUpdated,
 }
 
 // Error response for controllers/handlers

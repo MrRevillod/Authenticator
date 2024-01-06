@@ -8,15 +8,14 @@ use crate::utils::jwt_utils::*;
 use crate::services::auth_services::*;
 use crate::models::auth_models::*;
 use crate::models::responses_models::*;
-use crate::models::user_models::UserSchema;
+use crate::models::user_models::SqlxBool;
 use crate::utils::types::{ApiState, ApiResponse, ApiError, ApiSuccess};
 
 pub async fn login_controller(Extension(state): ApiState,
     Json(body): Json<LoginSchema>) -> ApiResponse<ApiSuccess, ApiError> {
 
-    let user = sqlx::query_as!(
-        UserSchema,
-        r#"SELECT * FROM User WHERE email = ?"#,
+    let user = sqlx::query!(
+        r#"SELECT uuid, email, password, validated FROM User WHERE email = ?"#,
         &body.email
     )
     .fetch_one(&state.db)
@@ -27,20 +26,19 @@ pub async fn login_controller(Extension(state): ApiState,
         return Err(ApiError::InvalidCredentials);
     }
 
-    if user.validated.as_bool() == false {
+    if !SqlxBool::from(user.validated).as_bool() {
         return Err(ApiError::AccountNotValidated);
     }
 
     let token = sign_jwt(&user.uuid, &state.jwt_secret).await?;
 
-    let json_response = LoginSuccessSchema {
+    let json_response = LoginSuccess {
         message: "Login success".to_string(),
         token
     };
 
     Ok(ApiSuccess::Login(json_response))
 }
-
 
 pub async fn register_controller(Extension(state): ApiState, Json(body): 
     Json<RegisterSchema>) -> ApiResponse<ApiSuccess, ApiError> {
@@ -54,7 +52,7 @@ pub async fn register_controller(Extension(state): ApiState, Json(body):
     let user_id = save_user(&state.db, &body).await?;
     let validation_url = create_validation_url(&state.db, &user_id, &state.jwt_secret).await?;
 
-    let json_response = RegisterSuccessSchema {
+    let json_response = RegisterSuccess {
         message: "User created".to_string(),
         url: validation_url
     };
@@ -86,15 +84,17 @@ pub async fn logout_controller(Extension(state): ApiState,
 pub async fn validate_account_controller(Extension(state): ApiState, Path(
     (uuid, token)): Path<(String, String)>) -> ApiResponse<ApiSuccess, ApiError>{
 
-    let user = sqlx::query_as!(UserSchema,
-        r#"SELECT * FROM User WHERE uuid = ?"#,
+    let user = sqlx::query!(
+        r#"SELECT validated FROM User WHERE uuid = ?"#,
         uuid.to_string()
     )
     .fetch_all(&state.db)
     .await
     .map_err(|_| ApiError::UnexpectedError)?;
 
-    let secret = format!("{}{:?}", &state.jwt_secret, &user[0].validated.as_bool());
+    let validated = SqlxBool::from(user[0].validated).as_bool();
+
+    let secret = format!("{}{:?}", &state.jwt_secret, &validated);
     let _ = decode_jwt(&token.to_string(), &secret).await?;
 
     let _ = sqlx::query!(
