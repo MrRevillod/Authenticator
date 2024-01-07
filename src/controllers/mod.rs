@@ -2,15 +2,14 @@
 pub mod auth_controllers;
 pub mod user_controllers;
 
-use std::sync::Arc;
 use serde_json::json;
-use axum::{response::IntoResponse, Extension, Json};
+use axum::{response::IntoResponse, Json, extract::State};
 
 use crate::config::app_state::AppState;
 
-pub async fn api_health(Extension(state): Extension<Arc<AppState>>) -> impl IntoResponse {
+pub async fn api_health(State(state): State<AppState>) -> impl IntoResponse {
     let res = json!({
-        "status": "running",
+        "status": state.status,
         "url": format!("http://localhost:{}", state.api_port)
     });
 

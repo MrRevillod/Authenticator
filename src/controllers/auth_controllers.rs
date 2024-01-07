@@ -1,8 +1,8 @@
 
 use bcrypt::verify;
-use axum::extract::Path;
+use axum::extract::{Path, State};
 use axum::http::Request;
-use axum::{Extension, Json};
+use axum::Json;
 
 use crate::utils::jwt_utils::*;
 use crate::services::auth_services::*;
@@ -11,7 +11,7 @@ use crate::models::responses_models::*;
 use crate::models::user_models::SqlxBool;
 use crate::utils::types::{ApiState, ApiResponse, ApiError, ApiSuccess};
 
-pub async fn login_controller(Extension(state): ApiState,
+pub async fn login_controller(State(state): ApiState,
     Json(body): Json<LoginSchema>) -> ApiResponse<ApiSuccess, ApiError> {
 
     let user = sqlx::query!(
@@ -40,7 +40,7 @@ pub async fn login_controller(Extension(state): ApiState,
     Ok(ApiSuccess::Login(json_response))
 }
 
-pub async fn register_controller(Extension(state): ApiState, Json(body): 
+pub async fn register_controller(State(state): ApiState, Json(body): 
     Json<RegisterSchema>) -> ApiResponse<ApiSuccess, ApiError> {
 
     let user_exists = check_user_exists(&state.db, &body.username, &body.email).await?;
@@ -60,7 +60,7 @@ pub async fn register_controller(Extension(state): ApiState, Json(body):
     Ok(ApiSuccess::Register(json_response))
 }
 
-pub async fn logout_controller(Extension(state): ApiState,
+pub async fn logout_controller(State(state): ApiState,
     req: Request<axum::body::Body>) -> ApiResponse<ApiSuccess, ApiError> {
 
     let req = req.headers();
@@ -81,7 +81,7 @@ pub async fn logout_controller(Extension(state): ApiState,
     Ok(ApiSuccess::Logout)
 }
 
-pub async fn validate_account_controller(Extension(state): ApiState, Path(
+pub async fn validate_account_controller(State(state): ApiState, Path(
     (uuid, token)): Path<(String, String)>) -> ApiResponse<ApiSuccess, ApiError>{
 
     let user = sqlx::query!(

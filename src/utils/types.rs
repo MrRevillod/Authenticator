@@ -1,7 +1,6 @@
 
-use std::sync::Arc;
 
-use axum::Extension;
+use axum::extract::State;
 
 use crate::models::responses_models::*;
 use crate::config::app_state::AppState;
@@ -13,7 +12,7 @@ pub type ApiResponse<T, U> = core::result::Result<T, U>;
 pub type ApiResult<T> = ApiResponse<T, ApiError>;
 
 // State for controllers/handlers
-pub type ApiState = Extension<Arc<AppState>>;
+pub type ApiState = State<AppState>;
 
 // Success response for controllers/handlers
 

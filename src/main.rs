@@ -22,10 +22,10 @@ async fn main() {
     let app_state = AppState::new(db_pool.unwrap());
 
     let app = Router::new()
-        .merge(api_router())
-        .merge(auth_router())
-        .merge(user_router())
-        .layer(axum::extract::Extension(app_state.clone()));
+        .merge(api_router(app_state.clone()))
+        .merge(auth_router(app_state.clone()))
+        .merge(user_router(app_state.clone()))
+    ;
 
     let server_addr = format!("0.0.0.0:{}", &app_state.api_port);
     let listener = tokio::net::TcpListener::bind(server_addr).await.unwrap();

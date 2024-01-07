@@ -1,16 +1,13 @@
 
-use axum::{
-    extract::Path, 
-    Extension, Json
-};
-
+use axum::Json;
 use bcrypt::hash;
+use axum::extract::{State, Path};
 
 use crate::models::responses_models::{GetUserSuccess, GetUsersSuccess};
 use crate::models::user_models::{UserSchema, UpdateUserSchema, UpdateProfileSchema};
 use crate::utils::types::{ApiState, ApiResponse, ApiError, ApiSuccess};
 
-pub async fn get_users_controller(Extension(state): ApiState) -> 
+pub async fn get_users_controller(State(state): ApiState) -> 
     ApiResponse<ApiSuccess, ApiError> {
     
     let users = sqlx::query_as!(UserSchema, r#"SELECT * FROM User"#)
@@ -32,7 +29,7 @@ pub async fn get_users_controller(Extension(state): ApiState) ->
     }
 }
 
-pub async fn get_user_controller(Extension(state): ApiState, 
+pub async fn get_user_controller(State(state): ApiState, 
     Path(uuid): Path<String>) -> ApiResponse<ApiSuccess, ApiError> {
 
     let user = sqlx::query_as!(
@@ -61,7 +58,7 @@ pub async fn get_user_controller(Extension(state): ApiState,
     }
 }
 
-pub async fn update_user_controller(Extension(state): ApiState, Path(uuid): 
+pub async fn update_user_controller(State(state): ApiState, Path(uuid): 
     Path<String>, Json(body): Json<UpdateUserSchema>) -> ApiResponse<ApiSuccess, ApiError> {
 
     let update = sqlx::query!(
@@ -89,7 +86,7 @@ pub async fn update_user_controller(Extension(state): ApiState, Path(uuid):
     return Ok(ApiSuccess::UserUpdated)
 }
 
-pub async fn update_profile_controller(Extension(state): ApiState, Path(uuid): 
+pub async fn update_profile_controller(State(state): ApiState, Path(uuid): 
     Path<String>, Json(body): Json<UpdateProfileSchema>) -> ApiResponse<ApiSuccess, ApiError> {
 
     let password = match hash(&body.password, 6) {
@@ -119,7 +116,7 @@ pub async fn update_profile_controller(Extension(state): ApiState, Path(uuid):
     return Ok(ApiSuccess::ProfileUpdated)
 }
 
-pub async fn delete_user_controller(Extension(state): ApiState, Path(uuid): 
+pub async fn delete_user_controller(State(state): ApiState, Path(uuid): 
     Path<String>) -> ApiResponse<ApiSuccess, ApiError> {
 
     let delete = sqlx::query!(

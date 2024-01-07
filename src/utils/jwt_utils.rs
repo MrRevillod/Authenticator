@@ -1,4 +1,5 @@
 
+use axum::http::HeaderValue;
 use jsonwebtoken::{
     encode,
     decode,
@@ -42,6 +43,25 @@ pub async fn decode_jwt(token: &String, secret: &String) -> ApiResult<String> {
 
     match token_data {
         Ok(token_data) => Ok(token_data.claims.uuid),
-        Err(_) => Err(ApiError::InvalidToken)
+        Err(_) => Err(ApiError::Unauthorized)
     }
 }
+
+pub fn split_authorization(authorization: Option<&HeaderValue>) -> Option<String> {
+
+    if let Some(authorization) = authorization {
+        
+        let authorization = authorization.to_str().unwrap();
+        let token = authorization.split(" ").collect::<Vec<&str>>();
+        
+        if token.len() == 2 {
+            return Some(token[1].to_string())
+        }
+    }
+
+    None
+}
+
+
+
+

@@ -113,7 +113,7 @@ impl IntoResponse for ApiError {
             }
 
             ApiError::Unauthorized => {
-                let response = json!({"message": "unauthorized"});
+                let response = json!({"message": "Unauthorized"});
                 (StatusCode::UNAUTHORIZED, Json(response)).into_response()
             }
 
