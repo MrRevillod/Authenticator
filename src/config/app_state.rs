@@ -1,6 +1,5 @@
 
 use std::env;
-// use std::sync::Arc;
 use sqlx::mysql::MySqlPool;
 
 #[derive(Clone)]

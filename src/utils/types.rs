@@ -37,7 +37,6 @@ pub enum ApiError {
     Unauthorized,
     UserNotFound,
     UserAlreadyExists,
-    InvalidToken,
     InvalidCredentials,
     AccountNotValidated,
     BadRequest

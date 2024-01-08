@@ -1,5 +1,6 @@
 
 use axum::http::HeaderValue;
+
 use jsonwebtoken::{
     encode,
     decode,
@@ -9,8 +10,8 @@ use jsonwebtoken::{
     DecodingKey,
 };
 
-use super::types::{ApiResult, ApiError};
 use crate::models::auth_models::*;
+use super::types::{ApiResult, ApiError};
 
 pub async fn sign_jwt(uuid: &String, secret: &String) -> ApiResult<String> {
 

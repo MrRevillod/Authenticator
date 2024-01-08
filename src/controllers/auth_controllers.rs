@@ -1,8 +1,8 @@
 
-use bcrypt::verify;
-use axum::extract::{Path, State};
-use axum::http::Request;
 use axum::Json;
+use bcrypt::verify;
+use axum::http::Request;
+use axum::extract::{Path, State};
 
 use crate::utils::jwt_utils::*;
 use crate::services::auth_services::*;

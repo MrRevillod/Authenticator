@@ -1,6 +1,5 @@
 
 use serde::{Serialize, Deserialize};
-
 use super::user_models::UserSchema;
 
 #[derive(Serialize, Deserialize, Debug)]

@@ -5,9 +5,8 @@ use axum::{
     middleware::Next
 };
 
-use crate::models::user_models::UserSchema;
-
 use crate::utils::jwt_utils::*;
+use crate::models::user_models::UserSchema;
 use crate::utils::types::{ApiError, ApiState};
 
 pub async fn session_validation(State(state): ApiState, 

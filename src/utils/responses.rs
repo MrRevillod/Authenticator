@@ -127,11 +127,6 @@ impl IntoResponse for ApiError {
                 (StatusCode::CONFLICT, Json(response)).into_response()
             }
 
-            ApiError::InvalidToken => {
-                let response = json!({"message": "Invalid token"});
-                (StatusCode::UNAUTHORIZED, Json(response)).into_response()
-            }
-
             ApiError::InvalidCredentials => {
                 let response = json!({"message": "Invalid credentials"});
                 (StatusCode::UNAUTHORIZED, Json(response)).into_response()
