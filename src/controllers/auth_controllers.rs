@@ -22,7 +22,11 @@ pub async fn login_controller(State(state): ApiState,
     .await
     .map_err(|_| ApiError::UserNotFound)?;
 
-    if let Err(_) = verify(&body.password, &user.password) {
+    println!("body pwd: {}", &body.password);
+
+    let is_valid = verify(&body.password, &user.password).unwrap();
+
+    if !is_valid {
         return Err(ApiError::InvalidCredentials);
     }
 

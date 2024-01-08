@@ -1,16 +1,17 @@
 
-
 use axum::{
     extract::{Request, State}, 
     response::Response, 
     middleware::Next
 };
 
+use crate::models::user_models::UserSchema;
+
 use crate::utils::jwt_utils::*;
 use crate::utils::types::{ApiError, ApiState};
 
 pub async fn session_validation(State(state): ApiState, 
-    req: Request, next: Next) -> Result<Response, ApiError> {
+    mut req: Request, next: Next) -> Result<Response, ApiError> {
 
     let authorization = req.headers().get("Authorization");
     let token = split_authorization(authorization);
@@ -19,9 +20,16 @@ pub async fn session_validation(State(state): ApiState,
         return Err(ApiError::Unauthorized)
     }
 
-    let _ = decode_jwt(&token.unwrap(), &state.jwt_secret).await?;
+    let uuid = decode_jwt(&token.unwrap(), &state.jwt_secret).await?;
 
-    println!("session_validation middleware");
+    let user = sqlx::query_as!(UserSchema,
+        r#"SELECT * FROM User WHERE uuid = ?"#, uuid
+    )
+    .fetch_one(&state.db)
+    .await
+    .map_err(|_| ApiError::Unauthorized)?;
 
+    req.extensions_mut().insert(user);
+    
     Ok(next.run(req).await)
 }

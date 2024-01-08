@@ -40,5 +40,6 @@ pub enum ApiError {
     InvalidToken,
     InvalidCredentials,
     AccountNotValidated,
+    BadRequest
 }
 

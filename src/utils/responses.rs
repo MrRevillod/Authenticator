@@ -141,6 +141,11 @@ impl IntoResponse for ApiError {
                 let response = json!({"message": "Account not validated"});
                 (StatusCode::UNAUTHORIZED, Json(response)).into_response()
             }
+
+            ApiError::BadRequest => {
+                let response = json!({"message": "Bad request"});
+                (StatusCode::BAD_REQUEST, Json(response)).into_response()
+            }
         }
     }
 }
