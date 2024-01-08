@@ -9,6 +9,7 @@ use crate::services::auth_services::*;
 use crate::models::auth_models::*;
 use crate::models::responses_models::*;
 use crate::models::user_models::SqlxBool;
+use crate::utils::validator::register_data_validation;
 use crate::utils::types::{ApiState, ApiResponse, ApiError, ApiSuccess};
 
 pub async fn login_controller(State(state): ApiState,
@@ -22,15 +23,15 @@ pub async fn login_controller(State(state): ApiState,
     .await
     .map_err(|_| ApiError::UserNotFound)?;
 
-    println!("body pwd: {}", &body.password);
+    let match_password = verify(&body.password, &user.password).unwrap();
 
-    let is_valid = verify(&body.password, &user.password).unwrap();
-
-    if !is_valid {
+    if !match_password {
         return Err(ApiError::InvalidCredentials);
     }
 
-    if !SqlxBool::from(user.validated).as_bool() {
+    let acc_validated = SqlxBool::from(user.validated).as_bool();
+
+    if !acc_validated {
         return Err(ApiError::AccountNotValidated);
     }
 
@@ -46,6 +47,8 @@ pub async fn login_controller(State(state): ApiState,
 
 pub async fn register_controller(State(state): ApiState, Json(body): 
     Json<RegisterSchema>) -> ApiResponse<ApiSuccess, ApiError> {
+
+    let _ = register_data_validation(&body).await?;
 
     let user_exists = check_user_exists(&state.db, &body.username, &body.email).await?;
 

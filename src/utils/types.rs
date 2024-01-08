@@ -1,6 +1,6 @@
 
-
 use axum::extract::State;
+use std::collections::HashMap;
 
 use crate::models::responses_models::*;
 use crate::config::app_state::AppState;
@@ -16,6 +16,7 @@ pub type ApiState = State<AppState>;
 
 // Success response for controllers/handlers
 
+#[allow(non_snake_case)]
 #[derive(Debug)]
 pub enum ApiSuccess {
     Register(RegisterSuccess),
@@ -31,6 +32,7 @@ pub enum ApiSuccess {
 
 // Error response for controllers/handlers
 
+#[allow(non_snake_case)]
 #[derive(Debug)]
 pub enum ApiError {
     UnexpectedError,
@@ -39,6 +41,6 @@ pub enum ApiError {
     UserAlreadyExists,
     InvalidCredentials,
     AccountNotValidated,
-    BadRequest
+    BadRequest,
+    ValidationError(HashMap<&'static str, String>),
 }
-

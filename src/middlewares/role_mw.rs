@@ -33,7 +33,7 @@ pub async fn owner_validation(req: Request, next: Next) -> Result<Response, ApiE
     let user_uuid = &user.uuid;
     let path_uuid = req.uri().path().trim_start_matches("/users/");
 
-    if path_uuid != user_uuid || &user.role != "ADMIN_ROLE" {
+    if path_uuid != user_uuid && user.role != "ADMIN_ROLE" {
         return Err(ApiError::Unauthorized)
     }
 

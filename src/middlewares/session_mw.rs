@@ -19,6 +19,15 @@ pub async fn session_validation(State(state): ApiState,
         return Err(ApiError::Unauthorized)
     }
 
+    match sqlx::query!(
+        r#"SELECT token FROM ExpiredToken WHERE token = ?"#, token.clone().unwrap()
+    )
+    .fetch_one(&state.db)
+    .await {
+        Ok(_) => return Err(ApiError::Unauthorized),
+        Err(_) => ()
+    }
+
     let uuid = decode_jwt(&token.unwrap(), &state.jwt_secret).await?;
 
     let user = sqlx::query_as!(UserSchema,

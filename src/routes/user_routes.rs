@@ -30,7 +30,7 @@ pub fn user_router(state: AppState) -> Router {
             .route_layer(from_fn_with_state(
                 state.clone(), session_validation)
             )
-            .route_layer(from_fn(uuid_validation))
+            .route_layer(from_fn_with_state(state.clone(), uuid_validation))
         )
         
         .route("/users/:uuid", put(update_user_controller)
@@ -42,7 +42,7 @@ pub fn user_router(state: AppState) -> Router {
             .route_layer(from_fn_with_state(
                 state.clone(), session_validation)
             )
-            .route_layer(from_fn(uuid_validation))
+            .route_layer(from_fn_with_state(state.clone(), uuid_validation))
         )
         
         .route("/users/:uuid", patch(update_profile_controller)
@@ -52,7 +52,7 @@ pub fn user_router(state: AppState) -> Router {
             .route_layer(from_fn_with_state(
                 state.clone(), session_validation)
             )
-            .route_layer(from_fn(uuid_validation))
+            .route_layer(from_fn_with_state(state.clone(), uuid_validation))
         )
         
         .route("/users/:uuid", delete(delete_user_controller)
@@ -62,7 +62,7 @@ pub fn user_router(state: AppState) -> Router {
             .route_layer(from_fn_with_state(
                 state.clone(), session_validation)
             )
-            .route_layer(from_fn(uuid_validation))
+            .route_layer(from_fn_with_state(state.clone(), uuid_validation))
         )
 
     .with_state(state)

@@ -4,8 +4,9 @@ use bcrypt::hash;
 use axum::extract::{State, Path};
 
 use crate::models::responses_models::{GetUserSuccess, GetUsersSuccess};
-use crate::models::user_models::{UserSchema, UpdateUserSchema, UpdateProfileSchema};
 use crate::utils::types::{ApiState, ApiResponse, ApiError, ApiSuccess};
+use crate::utils::validator::{update_user_validation, update_profile_validation};
+use crate::models::user_models::{UserSchema, UpdateUserSchema, UpdateProfileSchema};
 
 pub async fn get_users_controller(State(state): ApiState) -> 
     ApiResponse<ApiSuccess, ApiError> {
@@ -61,6 +62,8 @@ pub async fn get_user_controller(State(state): ApiState,
 pub async fn update_user_controller(State(state): ApiState, Path(uuid): 
     Path<String>, Json(body): Json<UpdateUserSchema>) -> ApiResponse<ApiSuccess, ApiError> {
 
+    let _ = update_user_validation(&body).await?;
+
     let update = sqlx::query!(
         r#"UPDATE User SET username = ?, email = ?, password = ?, role = ?, 
            validated = ? WHERE uuid = ?"#,
@@ -88,6 +91,8 @@ pub async fn update_user_controller(State(state): ApiState, Path(uuid):
 
 pub async fn update_profile_controller(State(state): ApiState, Path(uuid): 
     Path<String>, Json(body): Json<UpdateProfileSchema>) -> ApiResponse<ApiSuccess, ApiError> {
+
+    let _ = update_profile_validation(&body).await?;
 
     let password = match hash(&body.password, 6) {
         Ok(password) => password,

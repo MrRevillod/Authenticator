@@ -141,6 +141,11 @@ impl IntoResponse for ApiError {
                 let response = json!({"message": "Bad request"});
                 (StatusCode::BAD_REQUEST, Json(response)).into_response()
             }
+
+            ApiError::ValidationError(errors) => {
+                let response = json!({"message": "Validation error", "errors": errors});
+                (StatusCode::BAD_REQUEST, Json(response)).into_response()
+            }
         }
     }
 }
