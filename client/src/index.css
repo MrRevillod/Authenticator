@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.auth-bg-img {
+    background-image: url("/image-1.webp");
+    background-size: cover;
+    object-fit: contain;
+}

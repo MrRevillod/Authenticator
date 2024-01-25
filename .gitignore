@@ -1,0 +1,10 @@
+*/target
+*/.vercel
+*/node_modules/
+
+client/.env
+mailer/.env
+server/.env
+
+*/*/.shuttle-storage
+*/*/Secrets*.toml
