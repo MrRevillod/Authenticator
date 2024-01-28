@@ -1,6 +1,4 @@
 
-import { toast } from "sonner"
-
 import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -12,33 +10,30 @@ import { useAuth } from "../context/useAuth.jsx"
 import { useEffect } from "react"
 
 const formSchema = z.object({
-    
+
     email: z.string()
-    .min(1, { message: "El correo electrónico es requerido" })
-    .email({ message: "El correo electrónico no es válido" }),
-    
+        .min(1, { message: "El correo electrónico es requerido" })
+        .email({ message: "El correo electrónico no es válido" }),
+
     password: z.string()
-    .min(1, { message: "La contraseña es requerida" })
+        .min(1, { message: "La contraseña es requerida" })
 })
 
 export const LoginForm = () => {
 
-    const { register, handleSubmit, formState: { errors } } = 
-        useForm({ resolver: zodResolver(formSchema)
-    })
+    const { register, handleSubmit, formState: { errors } } =
+        useForm({
+            resolver: zodResolver(formSchema)
+        })
 
     const navigate = useNavigate()
-    const { useLogin, isAuthenticated, responseMessage } = useAuth()
-    
+    const { useLogin, isAuthenticated, } = useAuth()
+
     const onSubmit = async (formData) => {
         await useLogin(formData)
     }
 
-    useEffect(() => {  
-        
-        if (isAuthenticated) navigate('/dashboard')
-    
-    }, [isAuthenticated])
+    useEffect(() => { if (isAuthenticated) navigate('/dashboard') }, [isAuthenticated])
 
     return (
 
@@ -53,9 +48,9 @@ export const LoginForm = () => {
                     Disfruta la experiencia completa de TeamFlow.
                 </p>
             </div>
-            
-            <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}> 
-                
+
+            <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
+
                 <Input
                     label="Correo electrónico"
                     type="email"
@@ -64,7 +59,7 @@ export const LoginForm = () => {
                     error={errors.email ? (errors.email.message) : ""}
 
                 />
-                
+
                 <Input
                     label="Contraseña"
                     type="password"
@@ -72,14 +67,14 @@ export const LoginForm = () => {
                     placeholder="●●●●●●●●●●"
                     error={errors.password ? (errors.password.message) : ""}
                 />
-                
-                <button 
+
+                <button
                     type="submit"
                     className="bg-neutral-100 text-neutral-950 rounded-lg p-2 font-bold mt-4"
                 >
                     Ingresar
                 </button>
-                
+
                 <div className="flex justify-center">
                     <Link to="/auth/register" className="text-neutral-100 font-semibold">
                         ¿No tienes una cuenta? Registrate

@@ -21,6 +21,6 @@ export const Toast = () => {
     }, [])
 
     return (
-        <Toaster position={windowWidth >= 768 ? "bottom-right" : "top-right"} />
+        <Toaster position={windowWidth >= 768 ? "top-right" : "top-right"} />
     )
 }

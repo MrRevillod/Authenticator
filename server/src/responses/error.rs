@@ -6,7 +6,7 @@ pub const RESOURCE_NOT_FOUND:
 ;
 
 pub const EXPIRED: 
-    ApiResponse = ApiResponse::Standard(401, "Expirado")
+    ApiResponse = ApiResponse::Standard(401, "Solicitud inválida o expirada")
 ;
 
 pub const UNAUTHORIZED:
@@ -14,15 +14,19 @@ pub const UNAUTHORIZED:
 ;
 
 pub const USER_ALREADY_EXISTS:
-    ApiResponse = ApiResponse::Standard(400, "El usuario ya existe")
+    ApiResponse = ApiResponse::Standard(409, "Ya existe un usuario registrado con estos datos")
+;
+
+pub const BAD_REQUEST:
+    ApiResponse = ApiResponse::Standard(400, "Solicitud inválida")
 ;
 
 pub const INVALID_CREDENTIALS:
-    ApiResponse = ApiResponse::Standard(401, "Credenciales inválidas")
+    ApiResponse = ApiResponse::Standard(401, "Email o contraseña incorrectos")
 ;
 
 pub const ACCOUNT_NOT_VALIDATED:
-    ApiResponse = ApiResponse::Standard(401, "Cuenta no validada")
+    ApiResponse = ApiResponse::Standard(401, "Tu cuenta no está validada")
 ;
 
 pub const INTERNAL_SERVER_ERROR: 

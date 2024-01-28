@@ -19,11 +19,15 @@ use axum::http::header::{ACCEPT, AUTHORIZATION, ORIGIN, CONTENT_TYPE};
 use tokio::net::TcpListener;
 
 use tower_http::cors::CorsLayer;
+use tower_serve_static::ServeDir;
+use include_dir::{Dir, include_dir};
 use tower_cookies::CookieManagerLayer;
+
+static STATIC_DIR: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/public");
 
 #[tokio::main]
 async fn main() {
-
+    
     let database = match db_connection().await {
         
         Ok(db) => db,
@@ -32,7 +36,7 @@ async fn main() {
             return
         }
     };
-
+    
     let state = AppState::new(database);
     let http_headers = vec![ORIGIN, AUTHORIZATION, ACCEPT, CONTENT_TYPE];
 
@@ -43,7 +47,7 @@ async fn main() {
         Method::PUT,
         Method::DELETE,
     ];
-
+        
     let cors = CorsLayer::new()
         .allow_credentials(true)
         .allow_methods(http_methods)
@@ -52,11 +56,13 @@ async fn main() {
             state.client_addr.parse::<HeaderValue>().unwrap()
         )
     ;
-
+        
     let cookies = CookieManagerLayer::new();
+    let static_service = ServeDir::new(&STATIC_DIR);
 
     let app = Router::new()
         .nest("/auth", auth_router(state.clone()))
+        .nest_service("/", static_service)
         .layer(cors)
         .layer(cookies)
     ;

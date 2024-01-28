@@ -8,9 +8,6 @@ use bson::{
 
 use serde_json::to_value;
 use tower_cookies::Cookies;
-use cookie::Cookie;
-
-use time::Duration as CookieDuration;
 
 use mongodb::Collection;
 use axum::{extract::{State, Path}, Json, Extension};
@@ -25,7 +22,7 @@ use crate::{
         jwt::{sign_jwt, decode_jwt}, 
     },
     
-    models::user::UserModel,
+    models::user::{UserModel, UserProfile},
     config::state::ApiState, 
     
     responses::{
@@ -38,7 +35,11 @@ use crate::{
         authentication::{LoginData, PublicUserData}, 
     }, 
 
-    services::{user::check_user_exists, authentication::is_token},
+    services::{
+        cookies::new_cookie, 
+        user::check_user_exists,
+        authentication::acc_validation_service, 
+    },
 };
 
 pub async fn login_controller(cookies: Cookies, 
@@ -63,20 +64,27 @@ pub async fn login_controller(cookies: Cookies,
         return Err(Response::ACCOUNT_NOT_VALIDATED)
     }
 
-    let exp = Utc::now() + ChronoDuration::minutes(2);
-    let token = sign_jwt(&user.id.to_hex(), &state.jwt_secret, exp)?;
+    let session_exp = Utc::now() + ChronoDuration::minutes(1);
+    let refresh_exp = Utc::now() + ChronoDuration::minutes(2);
+    
+    let token = sign_jwt(&user.id.to_hex(), &state.jwt_secret, session_exp)?;
+    let refresh = sign_jwt(&user.id.to_hex(), &state.jwt_secret, refresh_exp)?;
 
-    let mut cookie = Cookie::new("token", token);
+    let session_cookie = new_cookie("token", token, time::Duration::minutes(1));
+    let refresh_cookie = new_cookie("refresh", refresh, time::Duration::minutes(2));
 
-    cookie.set_http_only(true); // non js accessible
-    cookie.set_secure(false); // true => https only / false => http
-    cookie.set_path("/");
-    cookie.set_max_age(CookieDuration::minutes(2));
+    let _ = cookies.add(session_cookie);
+    let _ = cookies.add(refresh_cookie);
 
-    let _ = cookies.add(cookie);
+    let profile = UserProfile {
+        id: user.id.to_hex(),
+        name: user.name,
+        username: user.username,
+        email: user.email,
+    };
 
     Ok(ApiResponse::DataResponse(
-        200, "Sesión iniciada", "exp", to_value(exp.timestamp()).unwrap())
+        200, "Sesión iniciada", "user", to_value(profile).unwrap())
     )
 }
 
@@ -100,7 +108,7 @@ pub async fn register_controller(State(state):
         username: body.username,
         email: body.email,
         password: hash(body.password, 7).unwrap(),
-        validated: true, // false in production
+        validated: false, // false in production
         tasks: Vec::new(),
     };
 
@@ -108,13 +116,27 @@ pub async fn register_controller(State(state):
         .map_err(|_| return Response::INTERNAL_SERVER_ERROR)
     ;
 
-    // here the call to email microservice
+    let exp = Utc::now() + ChronoDuration::days(1);
+    let secret = format!("{}{}", &state.jwt_secret, &user.validated.to_string());
+
+    let validation_token = sign_jwt(&user.id.to_hex(), &secret, exp)?;
+    let url = format!("http://localhost:5173/auth/validate/{}/{}", 
+        &user.id.to_hex(), &validation_token
+    );
+
+    let _ = acc_validation_service(
+        &state.mailer_api_key, &state.mailer_service_url, &user.email, &url).await?
+    ;
 
     Ok(Response::REGISTER_SUCCESS)
 }
 
 pub async fn validate_account(State(state): ApiState, 
     Path((id, token)): Path<(String, String)>) -> HttpResponse {
+
+    if id.len() != 24 || token.len() < 20 {
+        return Err(Response::BAD_REQUEST)
+    }
 
     let users: Collection<UserModel> = state.db.collection("users");
     
@@ -147,48 +169,25 @@ pub async fn logout_controller(
     cookies: Cookies, 
     State(state): ApiState, 
     Extension(token): Extension<String>, 
+    Extension(refresh): Extension<String>, 
     Extension(user): Extension<UserModel>) -> HttpResponse {
 
     let _ = save_token("exp_tokens", &state.db, &token, user.id).await?;
+    let _ = save_token("exp_tokens", &state.db, &refresh, user.id).await?;
 
-    let mut cookie = Cookie::from("token");
+    let session_cookie = new_cookie("token", "".to_string(), time::Duration::minutes(2));
+    let refresh_cookie = new_cookie("refresh", "".to_string(), time::Duration::minutes(2));
 
-    cookie.set_http_only(true);
-    cookie.set_secure(false);
-    cookie.set_path("/");
-    cookie.set_max_age(CookieDuration::minutes(5));
-
-    let _ = cookies.remove(cookie);
+    let _ = cookies.remove(session_cookie);
+    let _ = cookies.remove(refresh_cookie);
 
     Ok(Response::LOGOUT_SUCCESS)
 }
 
-pub async fn refresh_token(
-    cookies: Cookies, 
-    State(state): ApiState, 
-    Extension(token): Extension<String>, 
-    Extension(user): Extension<UserModel>) -> HttpResponse {
-
-    let _ = is_token("refresh_tokens", &state.db, &token).await?;
-    let _ = save_token("exp_tokens", &state.db, &token, user.id).await?;
-
-    let exp = Utc::now() + ChronoDuration::days(1);
-    let new_token = sign_jwt(&user.id.to_hex(), &state.jwt_secret, exp)?;
-
-    let _ = save_token("refresh_tokens", &state.db, &new_token, user.id).await?;
-
-    let mut cookie = Cookie::new("token", new_token);
-
-    cookie.set_http_only(true);
-    cookie.set_secure(false);
-    cookie.set_path("/");
-    cookie.set_max_age(CookieDuration::minutes(2));
-
-    let _ = cookies.add(cookie);
-
-    Ok(ApiResponse::DataResponse(200, "Exito", "exp", to_value(exp.timestamp()).unwrap()))
+pub async fn validate_session() -> HttpResponse {
+    Ok(Response::SUCCESS)
 }
 
-pub async fn validate_session() -> HttpResponse {
+pub async fn protected() -> HttpResponse {
     Ok(Response::SUCCESS)
 }

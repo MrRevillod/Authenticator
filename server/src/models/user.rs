@@ -24,7 +24,7 @@ pub struct UserModel {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UserProfile {
     #[serde(rename = "_id")]
-    pub id: ObjectId,
+    pub id: String,
     pub name: String,
     pub username: String,
     pub email: String,

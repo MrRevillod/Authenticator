@@ -8,33 +8,40 @@ import { createContext, useContext, useState } from "react"
 const AuthContext = createContext()
 
 export const useAuth = () => {
-    
+
     const context = useContext(AuthContext)
-    
+
     if (!context) throw new Error("useAuth debe estar dentro del proveedor AuthContext")
     return context
 }
 
-export const AuthProvider = ({ children, disable }) => {
+export const AuthProvider = ({ children }) => {
 
+    const [user, setUser] = useState(null)
+    const [isLoading, setIsLoading] = useState(false)
     const [isAuthenticated, setIsAuthenticated] = useState(false)
-    const [responseMessage, setResponseMessage] = useState("")
-    
-    const [isLoading, setIsLoading] = useState(true)
-    const [sessionExp, setSessionExp] = useState(0)
+    const [isCheckingSession, setIsCheckingSession] = useState(true)
 
     const useLogin = async (formData) => {
 
         try {
 
+            setIsLoading(true)
+
             const res = await auth.loginRequest(formData)
+
             setIsAuthenticated(res.status === 200)
-            setSessionExp(res.data.exp)
-        
+            setUser(res.data.user)
+
         } catch (error) {
+
             setIsAuthenticated(false)
-            toast(error.response.data.message)
-        
+
+            toast.error(error.response.data.message, {
+                duration: 3000,
+                style: { fontSize: "1rem" }
+            })
+
         } finally {
             setIsLoading(false)
         }
@@ -43,15 +50,25 @@ export const AuthProvider = ({ children, disable }) => {
     const useRegister = async (formData) => {
 
         try {
-            
+
+            setIsLoading(true)
+
             const res = await auth.registerRequest(formData)
-            setIsAuthenticated(res.status === 201)
-            toast(res.data.message)
-            
+
+            setIsLoading(false)
+
+            toast.success(res.data.message, {
+                duration: 5000,
+                style: { fontSize: "1rem" }
+            })
+
         } catch (error) {
-            setIsAuthenticated(false)
-            toast(error.response.data.message)
-        
+
+            toast.error(error.response.data.message, {
+                duration: 3000,
+                style: { fontSize: "1rem" }
+            })
+
         } finally {
             setIsLoading(false)
         }
@@ -60,73 +77,83 @@ export const AuthProvider = ({ children, disable }) => {
     const useLogout = async () => {
 
         try {
-            
+
             const res = await auth.logoutRequest()
+
             setIsAuthenticated(!(res.status === 200))
-            setResponseMessage(res.data.message)
-            
+
+            toast.success(res.data.message, {
+                duration: 5000,
+                style: { fontSize: "1rem" }
+            })
+
         } catch (error) {
+
             setIsAuthenticated(false)
-            toast(error.response.data.message)
-        
+
+            toast.error(error.response.data.message, {
+                duration: 3000,
+                style: { fontSize: "1rem" }
+            })
+
         } finally {
             setIsLoading(false)
         }
     }
 
-    const useRefresh = async () => {
+    const checkSession = async () => {
 
         try {
-            
-            const res = await auth.refreshRequest()
+
+            setIsLoading(true)
+            setIsCheckingSession(true)
+
+            const res = await auth.ValidateSessionRequest()
+
             setIsAuthenticated(res.status === 200)
-            setResponseMessage(res.data.message)
-            
+
         } catch (error) {
+
+            console.log(error.response)
+
             setIsAuthenticated(false)
-        
+
         } finally {
             setIsLoading(false)
+            setIsCheckingSession(false)
         }
     }
 
-    useEffect(() => {
+    const fetchProtectedData = async () => {
 
-        const checkSession = async () => {
+        try {
 
-            try {
-                
-                setIsLoading(true)
+            const res = await auth.getProtectedData()
 
-                const res = await auth.validateSessionRequest()
-                setIsAuthenticated(res.status === 200)
-            
-            } catch (error) {
-                setIsAuthenticated(false)
-            
-            } finally {
-                setIsLoading(false)
-            }
+            console.log(res)
         }
+        catch (error) {
 
-        checkSession()
+            console.log(error.response)
+        }
+    }
 
-    }, [])
+    useEffect(() => { checkSession() }, [])
 
     return (
 
         <AuthContext.Provider value={{
             isAuthenticated,
-            responseMessage,
             isLoading,
-            sessionExp,
+            isCheckingSession,
+            user,
             useLogin,
             useRegister,
             useLogout,
-            useRefresh
+            checkSession,
+            fetchProtectedData
         }}>
             {children}
         </AuthContext.Provider>
     )
 }
-

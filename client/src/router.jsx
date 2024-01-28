@@ -1,18 +1,19 @@
 
-import { useAuth } from "./context/useAuth"
+import { Loading } from "./pages/Loading.jsx"
+import { useAuth } from "./context/useAuth.jsx"
 import { Navigate, Outlet } from "react-router-dom"
 
-import { Loading } from "./pages/Loading.jsx"
-
 export const ProtectedRoute = () => {
-    
-    const { isAuthenticated, isLoading } = useAuth()
-    
-    if (isLoading) return <Loading />
-    
-    if (!isAuthenticated && !isLoading) {
+
+    const { isAuthenticated, isLoading, isCheckingSession } = useAuth()
+
+    if (isCheckingSession) {
+        return <Loading />
+    }
+
+    if (isLoading || isAuthenticated === false) {
         return <Navigate to="/auth/login" replace />
     }
-   
+
     return <Outlet />
 }
