@@ -4,15 +4,14 @@ use mongodb::{
     Database, 
     bson::Document
 };
+use reqwest::Body;
+use serde_json::json;
 
 use crate::{
     
-    models::user::UserModel,
-    
-    responses::{
-        ApiResult,
-        Response
-    },
+    models::user::UserModel, 
+    responses::{ApiResult, Response},
+    config::state::{MAILER_API_KEY, MAILER_SERVICE_URL},
 };
 
 pub async fn check_user_exists(
@@ -28,4 +27,32 @@ pub async fn check_user_exists(
         Some(_) => Err(Response::USER_ALREADY_EXISTS),
         None => return Ok(false)
     }
+}
+
+pub async fn email_change_mailer(email: &String, url: &String) -> ApiResult<()> {
+
+    let client = reqwest::Client::new();
+    let body = json!({ "email": email, "url": url });
+    
+    let body_bytes = serde_json::to_vec(&body)
+        .map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
+    ;
+
+    let response = client
+        .post(format!("{}/email-change", MAILER_SERVICE_URL.to_string()))
+        .header("Content-Type", "application/json")
+        .header("x-api-key", MAILER_API_KEY.to_string())
+        .body(Body::from(body_bytes))
+        .send()
+        .await
+        .map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
+    ;
+
+    match response.status().as_u16() {
+        200 => (),
+        400 => return Err(Response::BAD_REQUEST),
+        _ => return Err(Response::INTERNAL_SERVER_ERROR)
+    }
+
+    Ok(())
 }

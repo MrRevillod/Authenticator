@@ -2,35 +2,28 @@
 use mongodb::Database;
 use axum::extract::State;
 
-use super::env;
+use lazy_static::lazy_static;
 
+lazy_static! {
+
+    pub static ref JWT_SECRET: String = env("JWT_SECRET").to_string();
+    pub static ref SERVER_ADDR: String = format!("{}:{}", env("SERVER_IP"), env("SERVER_PORT")).to_string();
+    pub static ref CLIENT_ADDR: String = format!("{}:{}", env("CLIENT_IP"), env("CLIENT_PORT")).to_string();
+    pub static ref MAILER_SERVICE_URL: String = env("MAILER_SERVICE_URL").to_string();
+    pub static ref MAILER_API_KEY: String = env("MAILER_API_KEY").to_string();
+}
+
+use super::env;
 pub type ApiState = State<AppState>;
 
 #[derive(Clone)]
 pub struct AppState {
-
     pub db: Database,
-    pub jwt_secret: String,
-    pub server_addr: String,
-    pub client_addr: String,
-    pub mailer_service_url: String,
-    pub mailer_api_key: String,
 }
 
 impl AppState {
 
     pub fn new(db: Database) -> AppState {
-
-        AppState {
-
-            db,
-            jwt_secret: env("JWT_SECRET"),
-            
-            server_addr: format!("{}:{}", env("SERVER_IP"), env("SERVER_PORT")),
-            client_addr: format!("{}:{}", env("CLIENT_IP"), env("CLIENT_PORT")),
-            mailer_service_url: env("MAILER_SERVICE_URL"),
-            mailer_api_key: env("MAILER_API_KEY"),
-        }
+        AppState { db }
     }
-
 }

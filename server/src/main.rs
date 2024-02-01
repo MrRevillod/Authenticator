@@ -7,10 +7,13 @@ mod routes;
 mod services;
 mod models;
 
-use config::state::AppState;
+use config::state::*;
 use config::database::db_connection;
 
-use routes::authentication::auth_router;
+use routes::{
+    user::user_router,
+    authentication::auth_router
+};
 
 use axum::routing::Router;
 use axum::http::{Method, HeaderValue};
@@ -53,7 +56,7 @@ async fn main() {
         .allow_methods(http_methods)
         .allow_headers(http_headers)
         .allow_origin(
-            state.client_addr.parse::<HeaderValue>().unwrap()
+            CLIENT_ADDR.parse::<HeaderValue>().unwrap()
         )
     ;
         
@@ -62,14 +65,15 @@ async fn main() {
 
     let app = Router::new()
         .nest("/auth", auth_router(state.clone()))
+        .nest("/users", user_router(state.clone()))
         .nest_service("/", static_service)
         .layer(cors)
         .layer(cookies)
     ;
 
-    let listener = TcpListener::bind(&state.server_addr).await.unwrap();
+    let listener = TcpListener::bind(SERVER_ADDR.to_string()).await.unwrap();
 
-    println!("\n🦀 Server running on {}", &state.server_addr);
+    println!("\n🦀 Server running on {}", SERVER_ADDR.to_string());
     println!("💻 Esperando peticiones cliente\n");
     
     axum::serve(listener, app).await.unwrap();

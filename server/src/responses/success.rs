@@ -8,7 +8,7 @@ pub const REGISTER_SUCCESS:
 ;
 
 pub const LOGOUT_SUCCESS:
-    ApiResponse = ApiResponse::Standard(200, "Cierre de sesión exitoso")
+    ApiResponse = ApiResponse::Standard(200, "Sesión cerrada")
 ;
 
 pub const VALIDATION_SUCCESS:

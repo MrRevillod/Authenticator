@@ -16,15 +16,16 @@ use crate::{
         ApiResult,
     },
     
+    config::state::*,
     models::authentication::Token,
 };
 
 use super::jwt::{decode_jwt, sign_jwt};
 
-pub async fn save_token(token_type: &str, db: &Database, 
-    token: &String, user_id: ObjectId) -> ApiResult<()> {
+pub async fn save_exp_token(token: &String, 
+    user_id: ObjectId, db: &Database) -> ApiResult<()> {
 
-    let tokens: Collection<Token> = db.collection(token_type);
+    let tokens: Collection<Token> = db.collection("exp_tokens");
 
     let token = Token {
         id: ObjectId::new(),
@@ -39,9 +40,9 @@ pub async fn save_token(token_type: &str, db: &Database,
     Ok(())
 }
 
-pub async fn is_token(token_type: &str, db: &Database, token: &String) -> ApiResult<bool> {
+pub async fn is_exp_token(token: &String, db: &Database) -> ApiResult<bool> {
 
-    let tokens: Collection<Token> = db.collection(token_type);
+    let tokens: Collection<Token> = db.collection("exp_tokens");
 
     let query = tokens.find_one(doc! { "token": token }, None)
         .await.map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
@@ -53,17 +54,18 @@ pub async fn is_token(token_type: &str, db: &Database, token: &String) -> ApiRes
     }
 }
 
-pub async fn acc_validation_service(key: &String, 
-    service_url: &String, email: &String, url: &String) -> ApiResult<()> {
+pub async fn acc_validation_service(email: &String, url: &String) -> ApiResult<()> {
 
     let client = reqwest::Client::new();
     let body = json!({ "email": email, "url": url });
-    let body_bytes = to_vec(&body).map_err(|_| return Response::INTERNAL_SERVER_ERROR)?;
+    let body_bytes = to_vec(&body)
+        .map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
+    ;
 
     let response = client
-        .post(service_url)
+        .post(format!("{}/email-verification", MAILER_SERVICE_URL.to_string()))
         .header("Content-Type", "application/json")
-        .header("x-api-key", key)
+        .header("x-api-key", MAILER_API_KEY.to_string())
         .body(Body::from(body_bytes))
         .send()
         .await
@@ -80,7 +82,7 @@ pub async fn acc_validation_service(key: &String,
 }
 
 
-pub async fn new_session_token(refresh_token: &String, db: &Database, secret: &String) -> ApiResult<String> {
+pub async fn new_session_token(refresh_token: &String, db: &Database) -> ApiResult<String> {
 
     let exp_tokens: Collection<Token> = db.collection("exp_tokens");
 
@@ -92,11 +94,10 @@ pub async fn new_session_token(refresh_token: &String, db: &Database, secret: &S
         return Err(Response::UNAUTHORIZED)
     }
 
-    let user_id = decode_jwt(refresh_token, secret)?;
-
+    let user_id = decode_jwt(refresh_token, &JWT_SECRET)?;
     let exp = Utc::now() + Duration::minutes(1);
 
-    let new_token = sign_jwt(&user_id, secret, exp)?;
+    let new_token = sign_jwt(&user_id, &JWT_SECRET, exp)?;
 
     Ok(new_token)
 }

@@ -12,11 +12,18 @@ use axum::{
 
 use crate::{
 
-    config::state::ApiState, 
+    config::state::{ApiState, JWT_SECRET}, 
     models::user::UserModel,
     
     services::{
-        authentication::{is_token, new_session_token}, cookies::new_cookie, jwt::decode_jwt
+        
+        jwt::decode_jwt,
+        cookies::new_cookie, 
+
+        authentication::{
+            is_exp_token, 
+            new_session_token
+        }, 
     },
 
     responses::{
@@ -32,7 +39,7 @@ pub async fn session_validation(cookies: Cookies, State(state): ApiState,
 
     let payload_id = match &token {
         
-        Some(token) => decode_jwt(&token, &state.jwt_secret)?,
+        Some(token) => decode_jwt(&token, &JWT_SECRET)?,
         
         None => {
             
@@ -41,12 +48,12 @@ pub async fn session_validation(cookies: Cookies, State(state): ApiState,
                 None => return Err(Response::UNAUTHORIZED)
             };
 
-            let new_token = new_session_token(&refresh_token, &state.db, &state.jwt_secret).await?;
-            let new_session_cookie = new_cookie("token", new_token.clone(), time::Duration::minutes(2));
+            let new_token = new_session_token(&refresh_token, &state.db).await?;
+            let new_session_cookie = new_cookie("token", new_token.clone(), time::Duration::minutes(60));
 
             let _ = cookies.add(new_session_cookie);
 
-            let user_id = decode_jwt(&new_token, &state.jwt_secret)?;
+            let user_id = decode_jwt(&new_token, &JWT_SECRET)?;
 
             token = Some(new_token);
 
@@ -54,7 +61,7 @@ pub async fn session_validation(cookies: Cookies, State(state): ApiState,
         }
     };
 
-    let _ = is_token("exp_tokens", &state.db, &token.clone().unwrap()).await?;
+    let _ = is_exp_token(&token.clone().unwrap(), &state.db).await?;
 
     let users: Collection<UserModel> = state.db.collection("users");
 
@@ -69,6 +76,7 @@ pub async fn session_validation(cookies: Cookies, State(state): ApiState,
     match user {
         
         Some(user) => {
+
             req.extensions_mut().insert(user);
             req.extensions_mut().insert(token.unwrap());
         },

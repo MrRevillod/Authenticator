@@ -18,12 +18,12 @@ use chrono::{Utc, Duration as ChronoDuration};
 use crate::{
     
     services::{
-        authentication::save_token,
         jwt::{sign_jwt, decode_jwt}, 
+        authentication::save_exp_token,
     },
     
+    config::state::*, 
     models::user::{UserModel, UserProfile},
-    config::state::ApiState, 
     
     responses::{
         Response,
@@ -64,14 +64,14 @@ pub async fn login_controller(cookies: Cookies,
         return Err(Response::ACCOUNT_NOT_VALIDATED)
     }
 
-    let session_exp = Utc::now() + ChronoDuration::minutes(1);
-    let refresh_exp = Utc::now() + ChronoDuration::minutes(2);
+    let session_exp = Utc::now() + ChronoDuration::minutes(60);
+    let refresh_exp = Utc::now() + ChronoDuration::days(7);
     
-    let token = sign_jwt(&user.id.to_hex(), &state.jwt_secret, session_exp)?;
-    let refresh = sign_jwt(&user.id.to_hex(), &state.jwt_secret, refresh_exp)?;
+    let token = sign_jwt(&user.id.to_hex(), &JWT_SECRET, session_exp)?;
+    let refresh = sign_jwt(&user.id.to_hex(), &JWT_SECRET, refresh_exp)?;
 
-    let session_cookie = new_cookie("token", token, time::Duration::minutes(1));
-    let refresh_cookie = new_cookie("refresh", refresh, time::Duration::minutes(2));
+    let session_cookie = new_cookie("token", token, time::Duration::minutes(60));
+    let refresh_cookie = new_cookie("refresh", refresh, time::Duration::days(7));
 
     let _ = cookies.add(session_cookie);
     let _ = cookies.add(refresh_cookie);
@@ -108,7 +108,7 @@ pub async fn register_controller(State(state):
         username: body.username,
         email: body.email,
         password: hash(body.password, 7).unwrap(),
-        validated: false, // false in production
+        validated: false,
         tasks: Vec::new(),
     };
 
@@ -117,16 +117,14 @@ pub async fn register_controller(State(state):
     ;
 
     let exp = Utc::now() + ChronoDuration::days(1);
-    let secret = format!("{}{}", &state.jwt_secret, &user.validated.to_string());
+    let secret = format!("{}{}", &JWT_SECRET.to_string(), &user.validated.to_string());
 
     let validation_token = sign_jwt(&user.id.to_hex(), &secret, exp)?;
-    let url = format!("http://localhost:5173/auth/validate/{}/{}", 
-        &user.id.to_hex(), &validation_token
+    let url = format!("{}/auth/validate/{}/{}", 
+        &CLIENT_ADDR.to_string(), &user.id.to_hex(), &validation_token
     );
 
-    let _ = acc_validation_service(
-        &state.mailer_api_key, &state.mailer_service_url, &user.email, &url).await?
-    ;
+    let _ = acc_validation_service(&user.email, &url).await?;
 
     Ok(Response::REGISTER_SUCCESS)
 }
@@ -152,7 +150,7 @@ pub async fn validate_account(State(state): ApiState,
         None => return Err(Response::RESOURCE_NOT_FOUND)
     };
 
-    let secret = format!("{}{}", &state.jwt_secret, &user.validated.to_string());
+    let secret = format!("{}{}", &JWT_SECRET.to_string(), &user.validated.to_string());
 
     if let Err(_) = decode_jwt(&token, &secret) {
         return Err(Response::EXPIRED)
@@ -169,14 +167,20 @@ pub async fn logout_controller(
     cookies: Cookies, 
     State(state): ApiState, 
     Extension(token): Extension<String>, 
-    Extension(refresh): Extension<String>, 
     Extension(user): Extension<UserModel>) -> HttpResponse {
 
-    let _ = save_token("exp_tokens", &state.db, &token, user.id).await?;
-    let _ = save_token("exp_tokens", &state.db, &refresh, user.id).await?;
+    let refresh_cookie = cookies.get("refresh").map(|cookie| cookie.value().to_string());
 
-    let session_cookie = new_cookie("token", "".to_string(), time::Duration::minutes(2));
-    let refresh_cookie = new_cookie("refresh", "".to_string(), time::Duration::minutes(2));
+    let refresh_token = match refresh_cookie {
+        Some(refresh_token) => refresh_token,
+        None => return Err(Response::UNAUTHORIZED)
+    };
+
+    let _ = save_exp_token(&token, user.id, &state.db).await?;
+    let _ = save_exp_token(&refresh_token, user.id, &state.db).await?;
+
+    let session_cookie = new_cookie("token", "".to_string(), time::Duration::minutes(1));
+    let refresh_cookie = new_cookie("refresh", "".to_string(), time::Duration::minutes(1));
 
     let _ = cookies.remove(session_cookie);
     let _ = cookies.remove(refresh_cookie);
@@ -184,8 +188,18 @@ pub async fn logout_controller(
     Ok(Response::LOGOUT_SUCCESS)
 }
 
-pub async fn validate_session() -> HttpResponse {
-    Ok(Response::SUCCESS)
+pub async fn validate_session(Extension(user): Extension<UserModel>) -> HttpResponse {
+    
+    let profile = UserProfile {
+        id: user.id.to_hex(),
+        name: user.name,
+        username: user.username,
+        email: user.email,
+    };
+
+    Ok(ApiResponse::DataResponse(
+        200, "Sesión válida", "user", to_value(profile).unwrap())
+    )
 }
 
 pub async fn protected() -> HttpResponse {
