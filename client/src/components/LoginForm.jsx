@@ -37,7 +37,7 @@ export const LoginForm = () => {
 
     return (
 
-        <div className="flex flex-col justify-center gap-8 px-12 md:px-10 h-full w-full md:w-1/2 lg:w-7/12">
+        <div className="flex flex-col justify-center gap-8 px-4 h-full w-full md:w-1/2 lg:w-7/12">
 
             <div className="flex flex-col items-center gap-2">
                 <h2 className="text-3xl font-bold text-neutral-100 text-center">

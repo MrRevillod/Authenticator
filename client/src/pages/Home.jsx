@@ -1,14 +1,12 @@
 
-import { Navbar } from "../components/Navbar.jsx"
-
 export const Home = () => {
 
     return (
 
-        <main className="h-screen w-screen bg-neutral-950">
+        <div className="w-full h-full flex items-center justify-center">
 
-            <Navbar />
+            <h1 className="text-5xl text-neutral-100 font-bold">Home</h1>
 
-        </main>
+        </div>
     )
 }

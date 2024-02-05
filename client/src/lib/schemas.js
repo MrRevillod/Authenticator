@@ -31,3 +31,22 @@ export const registerSchema = z.object({
     message: "Las contraseñas no coinciden",
     path: ["confirmPassword"],
 })
+
+export const profileSchema = z.object({
+    
+    name: z.string()
+        .min(5, { message: "El nombre debe tener al menos 5 caracteres" })
+        .max(30, { message: "El nombre debe tener menos de 30 caracteres" }),
+
+    username: z.string()
+        .min(5, { message: "El apodo debe tener al menos 5 caracteres" })
+        .max(20, { message: "El apodo debe tener menos de 30 caracteres" }),
+
+    email: z.string()
+        .email({ message: "El email no es válido" })
+        .max(50, { message: "El email debe tener menos de 100 caracteres" }),
+    
+    // bio: z.string()
+    //     .max(150, { message: "La biografía debe tener menos de 150 caracteres" })
+    
+})

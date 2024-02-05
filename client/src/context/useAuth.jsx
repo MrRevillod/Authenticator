@@ -33,6 +33,8 @@ export const AuthProvider = ({ children }) => {
             setIsAuthenticated(res.status === 200)
             setUser(res.data.user)
 
+            console.log(res.data.user)
+
         } catch (error) {
 
             setIsAuthenticated(false)
@@ -91,7 +93,7 @@ export const AuthProvider = ({ children }) => {
 
             setIsAuthenticated(false)
 
-            toast.error(error.response.data.message, {
+            toast.error("Sesión cerrada", {
                 duration: 3000,
                 style: { fontSize: "1rem" }
             })
@@ -111,12 +113,12 @@ export const AuthProvider = ({ children }) => {
             const res = await auth.ValidateSessionRequest()
 
             setIsAuthenticated(res.status === 200)
+            setUser(res.data.user)
 
         } catch (error) {
 
-            console.log(error.response)
-
             setIsAuthenticated(false)
+            setUser(null)
 
         } finally {
             setIsLoading(false)
@@ -124,21 +126,7 @@ export const AuthProvider = ({ children }) => {
         }
     }
 
-    const fetchProtectedData = async () => {
-
-        try {
-
-            const res = await auth.getProtectedData()
-
-            console.log(res)
-        }
-        catch (error) {
-
-            console.log(error.response)
-        }
-    }
-
-    useEffect(() => { checkSession() }, [])
+    useEffect(() => { checkSession(); console.log(user) }, [])
 
     return (
 
@@ -151,7 +139,6 @@ export const AuthProvider = ({ children }) => {
             useRegister,
             useLogout,
             checkSession,
-            fetchProtectedData
         }}>
             {children}
         </AuthContext.Provider>

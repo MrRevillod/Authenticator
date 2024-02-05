@@ -7,6 +7,7 @@ import './index.css'
 import { Home } from "./pages/Home.jsx"
 import { Dashboard } from "./pages/Dashboard.jsx"
 import { LoginPage } from "./pages/auth/Login.jsx"
+import { MainLayout } from "./layouts/MainLayout.jsx"
 import { RegisterPage } from "./pages/auth/Register.jsx"
 
 import { Toast } from "./components/ui/Toast.jsx"
@@ -14,6 +15,7 @@ import { AuthProvider } from "./context/useAuth.jsx"
 import { ProtectedRoute } from "./router.jsx"
 import { AccountValidation } from "./pages/auth/AccountValidation.jsx"
 import { BrowserRouter, Routes, Route } from "react-router-dom"
+import { Profile } from "./pages/Profile.jsx"
 
 const root = ReactDOM.createRoot(document.getElementById("root"))
 
@@ -26,14 +28,24 @@ root.render(
             <BrowserRouter>
                 <Routes>
 
-                    <Route path="/" element={<Home />} />
+                    <Route path="/" element={<MainLayout><Home /></MainLayout>} />
                     <Route path="/auth/login" element={<LoginPage />} />
                     <Route path="/auth/register" element={<RegisterPage />} />
                     <Route path="/auth/validate/:id/:token" element={<AccountValidation />} />
 
                     <Route element={<ProtectedRoute />}>
-                        <Route path="/dashboard" element={<Dashboard />} />
-                        <Route path="/protected" element={<h1>Protected</h1>} />
+                        <Route path="/dashboard" element={
+                            <MainLayout>
+                                <Dashboard />
+                            </MainLayout>
+                        } />
+
+                        <Route path="/profile" element={
+                            <MainLayout>
+                                <Profile />
+                            </MainLayout>
+                        } />
+
                     </Route>
 
                 </Routes>
