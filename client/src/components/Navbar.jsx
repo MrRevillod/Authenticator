@@ -1,5 +1,5 @@
 
-import { useAuth } from "../context/useAuth.jsx"
+import { useAuth } from "../context/authContext.jsx"
 import { Link, useLocation } from "react-router-dom"
 
 import "../index.css"

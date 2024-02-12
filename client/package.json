@@ -17,7 +17,8 @@
 		"react-router-dom": "^6.21.3",
 		"soner": "^1.1.0",
 		"sonner": "^1.3.1",
-		"zod": "^3.22.4"
+		"zod": "^3.22.4",
+		"zustand": "^4.5.0"
 	},
 	"devDependencies": {
 		"@types/react": "^18.2.43",

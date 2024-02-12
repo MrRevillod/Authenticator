@@ -4,7 +4,7 @@ import { EyeIcon } from "./Icons.jsx"
 
 export const Input = React.forwardRef((props, ref) => {
     
-    const { label, type, placeholder, error, name} = props
+    const { label, type, placeholder, error, name } = props
 
     const classes = `bg-neutral-950 border-1 border-neutral-500 rounded-lg p-2
         focus:outline-none focus:ring-2 focus:ring-neutral-500

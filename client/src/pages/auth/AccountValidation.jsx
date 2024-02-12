@@ -1,8 +1,8 @@
 
-import { useAuth } from "../../context/useAuth.jsx"
+import { useAuth } from "../../context/authContext.jsx"
 import { Link, useNavigate } from "react-router-dom"
 import { useEffect, useState } from "react"
-import { validateAccountRequest } from "../../lib/services.js"
+import { validateAccountRequest } from "../../services/auth.js"
 
 export const AccountValidation = () => {
 

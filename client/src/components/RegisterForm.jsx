@@ -1,12 +1,12 @@
 
-import { useEffect } from "react"
 import { useForm } from "react-hook-form"
+import { useEffect } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Link, useNavigate } from "react-router-dom"
 
 import { Input } from "./ui/Input.jsx"
-import { useAuth } from "../context/useAuth.jsx"
 import { Spinner } from "./ui/Spinner.jsx"
+import { useAuth } from "../context/authContext.jsx"
 import { registerSchema } from "../lib/schemas.js"
 
 export const RegisterForm = () => {
@@ -61,7 +61,6 @@ export const RegisterForm = () => {
                             placeholder="john@domain.com"
                             {...register('email')}
                             error={errors.email ? (errors.email.message) : ""}
-
                         />
 
                         <Input

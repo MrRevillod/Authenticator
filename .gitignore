@@ -4,7 +4,7 @@
 
 client/.env
 mailer/.env
-server/.env
+api/.env
 
 */*/.shuttle-storage
 */*/Secrets*.toml

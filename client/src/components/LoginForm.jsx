@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Input } from "./ui/Input.jsx"
 import { Link, useNavigate } from "react-router-dom"
 
-import { useAuth } from "../context/useAuth.jsx"
+import { useAuth } from "../context/authContext.jsx"
 import { useEffect } from "react"
 
 const formSchema = z.object({

@@ -11,11 +11,12 @@ import { MainLayout } from "./layouts/MainLayout.jsx"
 import { RegisterPage } from "./pages/auth/Register.jsx"
 
 import { Toast } from "./components/ui/Toast.jsx"
-import { AuthProvider } from "./context/useAuth.jsx"
+import { Profile } from "./pages/Profile.jsx"
+import { AuthProvider } from "./context/authContext.jsx"
 import { ProtectedRoute } from "./router.jsx"
 import { AccountValidation } from "./pages/auth/AccountValidation.jsx"
 import { BrowserRouter, Routes, Route } from "react-router-dom"
-import { Profile } from "./pages/Profile.jsx"
+import { UserProvider } from "./context/userContext.jsx"
 
 const root = ReactDOM.createRoot(document.getElementById("root"))
 
@@ -24,33 +25,36 @@ root.render(
     <React.StrictMode>
 
         <AuthProvider>
+            <UserProvider>
 
-            <BrowserRouter>
-                <Routes>
+                <BrowserRouter>
+                    <Routes>
 
-                    <Route path="/" element={<MainLayout><Home /></MainLayout>} />
-                    <Route path="/auth/login" element={<LoginPage />} />
-                    <Route path="/auth/register" element={<RegisterPage />} />
-                    <Route path="/auth/validate/:id/:token" element={<AccountValidation />} />
+                        <Route path="/" element={<MainLayout><Home /></MainLayout>} />
+                        <Route path="/auth/login" element={<LoginPage />} />
+                        <Route path="/auth/register" element={<RegisterPage />} />
+                        <Route path="/auth/validate/:id/:token" element={<AccountValidation />} />
 
-                    <Route element={<ProtectedRoute />}>
-                        <Route path="/dashboard" element={
-                            <MainLayout>
-                                <Dashboard />
-                            </MainLayout>
-                        } />
+                        <Route element={<ProtectedRoute />}>
+                            
+                            <Route path="/dashboard" element={
+                                <MainLayout>
+                                    <Dashboard />
+                                </MainLayout>
+                            } />
 
-                        <Route path="/profile" element={
-                            <MainLayout>
-                                <Profile />
-                            </MainLayout>
-                        } />
+                            <Route path="/profile" element={
+                                <MainLayout>
+                                    <Profile />
+                                </MainLayout>
+                            } />
 
-                    </Route>
+                        </Route>
 
-                </Routes>
-            </BrowserRouter>
+                    </Routes>
+                </BrowserRouter>
 
+            </UserProvider>
         </AuthProvider>
 
         <Toast />
