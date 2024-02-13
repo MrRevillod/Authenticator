@@ -21,10 +21,9 @@ const formSchema = z.object({
 
 export const LoginForm = () => {
 
-    const { register, handleSubmit, formState: { errors } } =
-        useForm({
-            resolver: zodResolver(formSchema)
-        })
+    const { register, handleSubmit, formState: { errors } } = useForm({
+        resolver: zodResolver(formSchema)
+    })
 
     const navigate = useNavigate()
     const { useLogin, isAuthenticated, } = useAuth()

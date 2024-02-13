@@ -11,7 +11,7 @@ import { registerSchema } from "../lib/schemas.js"
 
 export const RegisterForm = () => {
 
-    const { register, handleSubmit, formState: { errors }, reset } = useForm({
+    const { register, handleSubmit, formState: { errors }, setError, reset } = useForm({
         resolver: zodResolver(registerSchema)
     })
 
@@ -20,7 +20,30 @@ export const RegisterForm = () => {
     const { useRegister, isAuthenticated, isLoading } = useAuth()
 
     const onSubmit = async (formData) => {
-        await useRegister(formData)
+
+        let response = await useRegister(formData, reset)
+
+        if (response.status === 409) {
+
+            if (response.data.conflicts.username) {
+
+                setError("username", {
+                    type: "manual",
+                    message: "El apodo ya está en uso"
+                })
+            }
+
+            if (response.data.conflicts.email) {
+
+                setError("email", {
+                    type: "manual",
+                    message: "El correo electrónico ya está en uso"
+                })
+            }
+
+            return
+        }
+
         reset()
     }
 

@@ -2,8 +2,8 @@
 import * as userServices from "../services/user.js"
 
 import { toast } from "sonner"
-import { useAuth } from "./authContext.jsx"
 import { useState } from "react"
+import { useUserStore } from "../lib/store.js"
 import { createContext, useContext } from "react"
 
 const userContext = createContext()
@@ -14,10 +14,38 @@ export const useUser = () => {
     if (!context) throw new Error("useUser debe estar dentro del proveedor UserContext")
     return context
 }
+
 export const UserProvider = ({ children }) => {
 
     const [isLoading, setIsLoading] = useState(false)
-    const { user, setUser } = useAuth()
+
+    const useDeleteAccount = async (id) => {
+
+        try {
+
+            setIsLoading(true)
+
+            const res = await userServices.deleteAccount(id)
+
+            toast.success(res.data.message, {
+                duration: 3000,
+                style: { fontSize: "1rem" }
+            })
+
+            useUserStore.setState({ user: null })
+
+        } catch (error) {
+
+            toast.error(error.response.data.message, {
+                duration: 3000,
+                style: { fontSize: "1rem" }
+            })
+
+            return error.response
+        }
+
+        finally { setIsLoading(false) }
+    }
 
     const useUpdate = async (id, values) => {
 
@@ -27,24 +55,54 @@ export const UserProvider = ({ children }) => {
 
             const res = await userServices.updateProfile(id, values)
 
-            setUser(res.data.user)
+            useUserStore.setState({ user: res.data.user })
 
             toast.success(res.data.message, {
                 duration: 3000,
                 style: { fontSize: "1rem" }
             })
 
+            return res
+
         } catch (error) {
 
-            toast.error(error.response.data.message, {
-                duration: 3000,
-                style: { fontSize: "1rem" }
-            })
+            if (error.response.status !== 409) {
+
+                toast.error(error.response.data.message, {
+                    duration: 3000,
+                    style: { fontSize: "1rem" }
+                })
+            }
+
+            return error.response
+        }
+
+        finally { setIsLoading(false) }
+    }
+
+    const useUpdateEmail = async (id, token) => {
+
+        let values = {}
+
+        try {
+
+            setIsLoading(true)
+
+            const res = await userServices.updateEmail(id, token)
+
+            values.isChanged = true
+            values.message = res.data.message
+
+        } catch (error) {
+
+            values.isChanged = false
+            values.message = error.response.data.message
         }
 
         finally {
-            console.log(user)
+
             setIsLoading(false)
+            return values
         }
     }
 
@@ -55,6 +113,8 @@ export const UserProvider = ({ children }) => {
             value={{
                 isLoading,
                 useUpdate,
+                useUpdateEmail,
+                useDeleteAccount,
             }}
         >
             {children}

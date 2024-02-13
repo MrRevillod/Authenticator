@@ -2,6 +2,7 @@
 import * as auth from "../services/auth.js"
 
 import { toast } from "sonner"
+import { useUserStore } from "../lib/store.js"
 import { useEffect, useState } from "react"
 import { createContext, useContext } from "react"
 
@@ -17,7 +18,6 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
 
-    const [user, setUser] = useState(null)
     const [isLoading, setIsLoading] = useState(false)
     const [isAuthenticated, setIsAuthenticated] = useState(false)
     const [isCheckingSession, setIsCheckingSession] = useState(true)
@@ -31,7 +31,7 @@ export const AuthProvider = ({ children }) => {
             const res = await auth.loginRequest(formData)
 
             setIsAuthenticated(res.status === 200)
-            setUser(res.data.user)
+            useUserStore.setState({ user: res.data.user })
 
         } catch (error) {
 
@@ -62,15 +62,20 @@ export const AuthProvider = ({ children }) => {
                 style: { fontSize: "1rem" }
             })
 
+            return res
+
         } catch (error) {
 
-            toast.error(error.response.data.message, {
-                duration: 3000,
-                style: { fontSize: "1rem" }
-            })
+            if (error.response.status !== 409) {
 
-        } finally {
+                toast.error(error.response.data.message, {
+                    duration: 3000,
+                    style: { fontSize: "1rem" }
+                })
+            }
+
             setIsLoading(false)
+            return error.response
         }
     }
 
@@ -98,6 +103,7 @@ export const AuthProvider = ({ children }) => {
 
         } finally {
             setIsLoading(false)
+            useUserStore.setState({ user: null })
         }
     }
 
@@ -111,12 +117,12 @@ export const AuthProvider = ({ children }) => {
             const res = await auth.ValidateSessionRequest()
 
             setIsAuthenticated(res.status === 200)
-            setUser(res.data.user)
+            useUserStore.setState({ user: res.data.user })
 
         } catch (error) {
 
             setIsAuthenticated(false)
-            setUser(null)
+            useUserStore.setState({ user: null })
 
         } finally {
             setIsLoading(false)
@@ -124,16 +130,40 @@ export const AuthProvider = ({ children }) => {
         }
     }
 
+    const useValidateAccount = async (id, token) => {
+
+        let values = {}
+
+        try {
+
+            setIsLoading(true)
+
+            const res = await auth.validateAccountRequest(id, token)
+
+            values.isValidated = true
+            values.message = res.data.message
+
+        } catch (error) {
+
+            values.isValidated = false
+            values.message = error.response.data.message
+
+        } finally {
+
+            setIsLoading(false)
+            return values
+        }
+    }
+
     useEffect(() => { checkSession() }, [])
-    
+
     return (
 
         <AuthContext.Provider value={{
             isAuthenticated,
             isLoading,
             isCheckingSession,
-            user,
-            setUser,
+            useValidateAccount,
             useLogin,
             useRegister,
             useLogout,

@@ -8,5 +8,3 @@ export const ValidateSessionRequest = async () => api.post("/auth/validate-sessi
 export const validateAccountRequest = async (id, token) => api.post(`/auth/validate-account/${id}/${token}`)
 
 export const getProtectedData = async () => api.post("/auth/protected")
-
-export const updateProfile = async (id, formData) => api.patch(`/users/${id}`, formData)

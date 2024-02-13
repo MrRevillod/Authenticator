@@ -1,23 +1,33 @@
 
 import { useForm } from "react-hook-form"
+import { useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 
 import { toast } from "sonner"
 import { Input } from "./ui/Input.jsx"
 import { Spinner } from "./ui/Spinner.jsx"
-import { useAuth } from "../context/authContext.jsx"
 import { useUser } from "../context/userContext.jsx"
+import { ConfirmModal } from "./ConfirmModal.jsx"
+import { useUserStore } from "../lib/store.js"
 import { profileSchema } from "../lib/schemas.js"
 
 export const ProfileForm = () => {
 
-    const { register, handleSubmit, formState: { errors }, getValues, reset } = useForm({
+    const user = useUserStore(state => state.user)
+    const { register, handleSubmit, formState: { errors }, setError, getValues, reset } = useForm({
         resolver: zodResolver(profileSchema)
     })
 
-    const { useUpdate } = useUser()
-    const { isLoading, user } = useAuth()
+    const { useUpdate, useDeleteAccount, isLoading } = useUser()
+    const [isModalOpen, setIsModalOpen] = useState(false)
 
+    const handleDelete = async () => {
+
+        setIsModalOpen(false)
+        const id = user._id
+        await useDeleteAccount(id)
+        location.reload()
+    }
 
     const onSubmit = async (formData) => {
 
@@ -33,11 +43,36 @@ export const ProfileForm = () => {
         }
 
         if (Object.keys(values).length === 0) {
-            toast.error("No se han hecho cambios")
+            toast.error("No se han hecho cambios", {
+                duration: 3000,
+                style: { fontSize: "1rem" }
+            })
             return
         }
 
-        await useUpdate(user._id, values)
+        let response = await useUpdate(user._id, values)
+
+        if (response.status === 409) {
+
+            if (response.data.conflicts.username) {
+
+                setError("username", {
+                    type: "manual",
+                    message: "El apodo ya está en uso"
+                })
+            }
+
+            if (response.data.conflicts.email) {
+
+                setError("email", {
+                    type: "manual",
+                    message: "El correo electrónico ya está en uso"
+                })
+            }
+
+            return
+        }
+
         reset()
     }
 
@@ -58,7 +93,7 @@ export const ProfileForm = () => {
                         {...register('name')}
                         error={errors.name ? (errors.name.message) : ""}
                     />
-                    
+
                     <Input
                         label="Apodo"
                         type="text"
@@ -66,7 +101,7 @@ export const ProfileForm = () => {
                         {...register('username')}
                         error={errors.username ? (errors.username.message) : ""}
                     />
-                    
+
                     <Input
                         label="Correo eléctronico"
                         type="email"
@@ -102,7 +137,22 @@ export const ProfileForm = () => {
                         Actualizar perfíl
                     </button>
 
+
                 </form>
+
+                <button
+                    onClick={() => setIsModalOpen(true)}
+                    className="bg-red-700 text-neutral-200 rounded-lg p-2 font-bold"
+                >
+                    Eliminar cuenta
+                </button>
+
+                <ConfirmModal
+                    isOpen={isModalOpen}
+                    text="¿Estás seguro de que quieres eliminar tu cuenta?"
+                    onConfirm={handleDelete}
+                    onClose={() => setIsModalOpen(false)}
+                />
 
             </div>
         </div>
