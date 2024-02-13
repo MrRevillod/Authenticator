@@ -13,10 +13,6 @@ pub const UNAUTHORIZED:
     ApiResponse = ApiResponse::Standard(401, "No autorizado")
 ;
 
-pub const USER_ALREADY_EXISTS:
-    ApiResponse = ApiResponse::Standard(409, "Ya existe un usuario registrado con estos datos")
-;
-
 pub const BAD_REQUEST:
     ApiResponse = ApiResponse::Standard(400, "Solicitud inválida")
 ;

@@ -1,12 +1,12 @@
 
-use chrono::{Duration, Utc};
 use mongodb::{
-    Collection,
     Database,
+    Collection,
+    bson::{doc, oid::ObjectId}
 };
 
 use reqwest::Body;
-use bson::{doc, oid::ObjectId};
+use chrono::{Duration, Utc};
 use serde_json::{json, to_vec};
 
 use crate::{

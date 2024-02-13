@@ -22,8 +22,8 @@ use crate::{
     responses::{ApiResponse as ApiError, Response}
 };
 
-pub async fn is_valid_id(State(state): ApiState, 
-    Path(id): Path<String>, mut req: Request, next: Next) -> Result<AxumResponse, ApiError> {
+pub async fn is_valid_id(State(state): ApiState, Path(id): Path<String>, 
+    mut req: Request, next: Next) -> Result<AxumResponse, ApiError> {
 
     let users: Collection<UserModel> = state.db.collection("users");
 
@@ -41,6 +41,30 @@ pub async fn is_valid_id(State(state): ApiState,
     }
 
     req.extensions_mut().insert(oid);
+    Ok(next.run(req).await)
+}
+
+pub async fn is_valid_id_and_token(State(state): ApiState,
+    Path((id, token)): Path<(String, String)>, 
+    mut req: Request, next: Next) -> Result<AxumResponse, ApiError> {
+
+    let users: Collection<UserModel> = state.db.collection("users");
+
+    let oid = match ObjectId::from_str(&id) {
+        Ok(oid) => oid,
+        Err(_) => return Err(Response::BAD_REQUEST)
+    };
+
+    let query = users.find_one(doc! {"_id": oid}, None)
+        .await.map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
+    ;
+
+    if let None = query {
+        return Err(Response::RESOURCE_NOT_FOUND)
+    }
+
+    req.extensions_mut().insert(oid);
+    req.extensions_mut().insert(token);
 
     Ok(next.run(req).await)
 }
@@ -57,4 +81,3 @@ pub async fn owner_validation(req: Request,
 
     Ok(next.run(req).await)
 }
-

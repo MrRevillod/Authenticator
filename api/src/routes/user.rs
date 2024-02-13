@@ -16,7 +16,7 @@ use crate::{
     
     middlewares::{
         session::session_validation, 
-        validation::{is_valid_id, owner_validation}
+        validation::{is_valid_id, is_valid_id_and_token, owner_validation}
     } 
 };
 
@@ -42,7 +42,7 @@ pub fn user_router(state: AppState) -> Router {
         )
 
         .route("/update-email/:id/:token", get(update_email)
-            .route_layer(mw_func(state.clone(), is_valid_id)) 
+            .route_layer(mw_func(state.clone(), is_valid_id_and_token)) 
         )
 
         .with_state(state)

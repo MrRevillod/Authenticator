@@ -8,7 +8,6 @@ pub mod Response {
     pub use super::success::*;
 }
 
-use std::collections::HashMap;
 use serde_json::{json, Value};
 
 use axum::{
@@ -23,11 +22,27 @@ pub type HttpResponse = Result<ApiResponse, ApiResponse>;
 // type for services results
 pub type ApiResult<T> = Result<T, ApiResponse>;
 
-// enum for base responses -> impl is in src/responses/templates.rs
 pub enum ApiResponse {
+    
+    /// `Standard` es una respuesta estándar.
+    /// 
+    /// # Parámetros
+    /// 
+    /// * `u16`: Código de estado HTTP.
+    /// * `&'static str`: Mensaje de la respuesta.
+    
     Standard(u16, &'static str),
+
+    /// `DataResponse` es una respuesta que contiene datos.
+    /// 
+    /// # Parámetros
+    /// 
+    /// * `u16`: Código de estado HTTP.
+    /// * `&'static str`: Mensaje de la respuesta.
+    /// * `&'static str`: Tipo de los datos.
+    /// * `Value`: Los datos de la respuesta.
+    
     DataResponse(u16, &'static str, &'static str, Value),
-    BadRequest(HashMap<&'static str, &'static str>)
 }
 
 impl IntoResponse for ApiResponse {
@@ -56,19 +71,6 @@ impl IntoResponse for ApiResponse {
                     "status": status,
                     "message": message,
                     data_name: data,
-                });
-
-                (code, Json(data)).into_response()
-            }
-
-            ApiResponse::BadRequest(errors) => {
-
-                let code = StatusCode::BAD_REQUEST;
-                
-                let data = json!({
-                    "status": 400,
-                    "message": "Error de validación de datos",
-                    "errors": errors,
                 });
 
                 (code, Json(data)).into_response()

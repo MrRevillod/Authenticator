@@ -1,45 +1,43 @@
 
-use std::str::FromStr;
-use mongodb::Collection;
+use std::collections::HashMap;
+
+use serde_json::to_value;
 use bcrypt::{verify, hash};
 use tower_cookies::Cookies;
-use bson::{doc, oid::ObjectId};
-use serde_json::to_value;
 use chrono::{Utc, Duration as ChronoDuration};
-use axum::{extract::{State, Path}, Json, Extension};
+
+use mongodb::{
+    Collection, bson::{doc, oid::ObjectId}
+};
+
+use axum::{
+    extract::State, 
+    Json, Extension,
+};
 
 use crate::{
     
     config::state::*, 
-    
-    services::{
-        jwt::{sign_jwt, decode_jwt}, 
-        authentication::save_exp_token,
-    },
-    
-    responses::{
-        Response,
-        HttpResponse, ApiResponse,
-    },
-    
     models::{
         validations::Validation,
-        user::{UserModel, UserProfile},
+        user::{UserModel, UserProfile}, 
         authentication::{LoginData, PublicUserData}, 
     }, 
-
+    responses::{
+        ApiResponse, HttpResponse, Response
+    }, 
     services::{
         cookies::new_cookie, 
-        user::check_user_exists,
-        authentication::acc_validation_service, 
-    },
+        jwt::{decode_jwt, sign_jwt}, 
+        user::check_conflict_fields,
+        authentication::{acc_validation_service, save_exp_token}, 
+    }
 };
 
 pub async fn login_controller(cookies: Cookies, 
     State(state): ApiState, Json(body): Json<LoginData>) -> HttpResponse {
 
     let users: Collection<UserModel> = state.db.collection("users");
-
     let query = users.find_one(doc! { "email": &body.email}, None)
         .await.map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
     ;
@@ -86,19 +84,15 @@ pub async fn login_controller(cookies: Cookies,
 pub async fn register_controller(State(state): 
     ApiState, Json(body): Json<PublicUserData>) -> HttpResponse {
 
+    let users: Collection<UserModel> = state.db.collection("users");
     body.validate()?;
 
-    let users: Collection<UserModel> = state.db.collection("users");
+    let mut conflict_map = HashMap::new();
 
-    let filter = doc! { 
-        
-        "$or": [
-            { "username": &body.username },
-            { "email": &body.email }
-        ]
-    };
+    conflict_map.insert("username".to_string(), body.username.clone());
+    conflict_map.insert("email".to_string(), body.email.clone());
 
-    let _ = check_user_exists(&state.db, filter).await?;
+    let _ = check_conflict_fields(&state.db, &conflict_map).await?;
 
     let user = UserModel {
         id: ObjectId::new(),
@@ -130,15 +124,9 @@ pub async fn register_controller(State(state):
 }
 
 pub async fn validate_account(State(state): ApiState, 
-    Path((id, token)): Path<(String, String)>) -> HttpResponse {
-
-    if id.len() != 24 || token.len() < 20 {
-        return Err(Response::BAD_REQUEST)
-    }
+    Extension(oid): Extension<ObjectId>, Extension(token): Extension<String>) -> HttpResponse {
 
     let users: Collection<UserModel> = state.db.collection("users");
-    
-    let oid = ObjectId::from_str(&id).unwrap();
     let filter = doc! {"_id": oid};
 
     let query = users.find_one(filter, None).await
@@ -157,7 +145,6 @@ pub async fn validate_account(State(state): ApiState,
     }
 
     user.validated = true;
-
     let _ = user.save(&state.db).await?;
 
     Ok(Response::VALIDATION_SUCCESS)

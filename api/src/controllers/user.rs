@@ -1,25 +1,39 @@
 
-use std::collections::HashMap;
-
 use bcrypt::hash;
-use mongodb::Collection;
-use bson::{doc, oid::ObjectId, Document};
+use tower_cookies::Cookies;
+use std::collections::HashMap;
 use chrono::{Utc, Duration as ChronoDuration};
 use serde_json::{from_value, to_value, Value};
-use axum::{extract::{Path, State}, Extension, Json};
+
+use mongodb::{
+    Collection,
+    bson::{doc, oid::ObjectId, Document}
+};
+
+use axum::{
+    extract::State, 
+    Extension, Json,
+};
 
 use crate::{
+    
     config::state::*, 
-    models::user::{UserModel, UserProfile}, 
-    responses::{ApiResponse, HttpResponse, Response}, 
-    services::{jwt::{decode_jwt, sign_jwt}, user::update_email_service}
+
+    models::user::{
+        UserModel, UserProfile
+    }, 
+    responses::{
+        ApiResponse, HttpResponse, Response
+    }, 
+    services::{
+        cookies::new_cookie, jwt::{decode_jwt, sign_jwt}, user::{check_conflict_fields, update_email_service} 
+    }
 };
 
 pub async fn get_user(State(state): ApiState, 
     Extension(oid): Extension<ObjectId>) -> HttpResponse {
 
     let users: Collection<UserModel> = state.db.collection("users");
-
     let query = users.find_one(doc! {"_id": oid}, None)
         .await.map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
     ;
@@ -41,11 +55,10 @@ pub async fn get_user(State(state): ApiState,
     ))
 }
 
-pub async fn delete_account(State(state): ApiState,
+pub async fn delete_account(cookies: Cookies, State(state): ApiState,
     Extension(oid): Extension<ObjectId>) -> HttpResponse {
 
     let users: Collection<UserModel> = state.db.collection("users");
-
     let query = users.delete_one(doc! {"_id": oid}, None)
         .await.map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
     ;
@@ -54,6 +67,12 @@ pub async fn delete_account(State(state): ApiState,
         return Err(Response::RESOURCE_NOT_FOUND);
     }
 
+    let session_cookie = new_cookie("token", "".to_string(), time::Duration::minutes(1));
+    let refresh_cookie = new_cookie("refresh", "".to_string(), time::Duration::minutes(1));
+
+    let _ = cookies.remove(session_cookie);
+    let _ = cookies.remove(refresh_cookie);
+
     Ok(Response::SUCCESS)
 }
 
@@ -61,57 +80,29 @@ pub async fn update_profile(
     State(state): ApiState, Extension(oid): Extension<ObjectId>, 
     Extension(user): Extension<UserModel>, Json(body): Json<Value>) -> HttpResponse {
 
+    let mut doc = Document::new();
+
     let users: Collection<UserModel> = state.db.collection("users");
-    let valid_fields = vec!["id", "name", "username", "email", "password"];
+    let valid_fields = vec!["id", "name", "username", "email", "password", "confirmPassword"];
 
     let mut body_map: HashMap<String, String> = from_value(body)
         .map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
     ;
 
-    let mut existing_fields = HashMap::new();
-
-    if body_map.get("email").is_some() {
-        
-        let email_exists = users.find_one(doc! {"email": &body_map["email"]}, None).await
-            .map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
-            .is_some()
-        ;
-        
-        if email_exists {
-            existing_fields.insert("email", "Ya existe un usuario con este email");
-        }
-    }
-
-    if body_map.get("username").is_some() {
-        
-        let username_exists = users.find_one(doc! {"username": &body_map["username"]}, None).await
-            .map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
-            .is_some()
-        ;
-        
-        if username_exists {
-            existing_fields.insert("username", "Ya existe un usuario con este alias");
-        }
-    }
-
-    if !existing_fields.is_empty() {
-        return Err(ApiResponse::BadRequest(existing_fields))
-    }
+    let _ = check_conflict_fields(&state.db, &body_map).await?;
 
     if let Some(pwd) = body_map.get("password") {
         let encrypted = hash(pwd, 7).unwrap();
         body_map.insert("password".to_string(), encrypted);
     }
     
-    let mut doc = Document::new();
-
     for (key, value) in &body_map {
         
         if !valid_fields.contains(&key.as_str()) {
             return Err(Response::BAD_REQUEST);
         }
 
-        if key == "email" {
+        if key == "email" || key == "confirmPassword" {
             continue 
         }
 
@@ -124,6 +115,8 @@ pub async fn update_profile(
         .await.map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
     ;
 
+    let mut email_updated = false;
+
     if let Some(email) = body_map.get("email") {
 
         let payload = (&oid.to_hex(), email);
@@ -132,11 +125,18 @@ pub async fn update_profile(
 
         let token = sign_jwt(payload, &secret, exp)?;
 
-        let url = format!("{}/users/change-email/{}/{}", 
+        let url = format!("{}/users/update-email/{}/{}", 
             CLIENT_ADDR.to_string(), oid.to_hex(), token
         );
 
         update_email_service(&email, &url).await?;
+        email_updated = true;
+    }
+
+    let mut response_msg = "Tu perfíl se ha actualizado";
+
+    if email_updated {
+        response_msg = "Tu perfíl se ha actualizado, revisa tu email para confirmar el cambio";
     }
 
     let updated = users.find_one(doc! {"_id": oid}, None).await.unwrap().unwrap();
@@ -148,14 +148,16 @@ pub async fn update_profile(
         email: updated.email,
     };
 
-    Ok(ApiResponse::DataResponse(200, "success", "profile updated", to_value(profile).unwrap()))
+    Ok(ApiResponse::DataResponse(200, 
+        &response_msg, "user", to_value(profile).unwrap())
+    )
 }
 
 pub async fn update_email(State(state): ApiState, 
-    Path(token): Path<String>, Extension(oid): Extension<ObjectId>) -> HttpResponse {
+    Extension(oid): Extension<ObjectId>, 
+    Extension(token): Extension<String>) -> HttpResponse {
 
     let users: Collection<UserModel> = state.db.collection("users");
-
     let filter = doc! {"_id": oid};
 
     let query = users.find_one(filter, None).await
@@ -177,5 +179,5 @@ pub async fn update_email(State(state): ApiState,
     user.email = payload.email;
     user.save(&state.db).await?;
 
-    Ok(Response::SUCCESS)
+    Ok(Response::EMAIL_UPDATE_SUCCESS)
 }

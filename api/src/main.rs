@@ -22,7 +22,6 @@ use axum::{
 };
 
 use tokio::net::TcpListener;
-
 use tower_http::cors::CorsLayer;
 use tower_serve_static::ServeDir;
 use include_dir::{Dir, include_dir};

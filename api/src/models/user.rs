@@ -1,8 +1,11 @@
 
 use futures::stream::TryStreamExt;
-use mongodb::{Collection, Database};
 use serde::{Deserialize, Serialize};
-use bson::{doc, oid::ObjectId, to_bson};
+
+use mongodb::{
+    Collection, Database,
+    bson::{doc, oid::ObjectId, to_bson},
+};
 
 use crate::responses::{
     Response,

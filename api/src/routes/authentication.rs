@@ -2,6 +2,7 @@
 use axum::routing::{Router, post};
 use axum::middleware::from_fn_with_state as func;
 
+use crate::middlewares::validation::is_valid_id_and_token;
 use crate::{
     
     config::state::AppState, 
@@ -28,7 +29,9 @@ pub fn auth_router(state: AppState) -> Router {
         .route("/logout", post(logout_controller)
             .route_layer(func(state.clone(), session_validation)))
 
-        .route("/validate-account/:id/:token", post(validate_account))
+        .route("/validate-account/:id/:token", post(validate_account)
+            .route_layer(func(state.clone(), is_valid_id_and_token))
+        )
 
         .route("/validate-session", post(validate_session)
             .route_layer(func(state.clone(), session_validation))

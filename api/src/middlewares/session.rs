@@ -1,8 +1,11 @@
 
 use std::str::FromStr;
-use mongodb::Collection;
 use tower_cookies::Cookies;
-use bson::{doc, oid::ObjectId};
+
+use mongodb::{
+    Collection,
+    bson::{doc, oid::ObjectId},
+};
 
 use axum::{
     middleware::Next,
@@ -12,24 +15,25 @@ use axum::{
 
 use crate::{
 
-    config::state::{ApiState, JWT_SECRET}, 
     models::user::UserModel,
     
     services::{
         
         jwt::decode_jwt,
         cookies::new_cookie, 
-
+        
         authentication::{
             is_exp_token, 
             new_session_token
         }, 
     },
-
+    
     responses::{
         Response,
         ApiResponse as ApiError,
     },
+    
+    config::state::{ApiState, JWT_SECRET}, 
 };
 
 pub async fn session_validation(cookies: Cookies, State(state): ApiState, 

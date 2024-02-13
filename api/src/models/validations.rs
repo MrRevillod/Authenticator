@@ -1,6 +1,7 @@
 
 use regex::Regex;
 use lazy_static::lazy_static;
+use serde_json::to_value;
 use std::collections::HashMap;
 
 use super::authentication::PublicUserData;
@@ -59,7 +60,9 @@ impl Validation for PublicUserData {
         }
 
         if errors.len() > 0 {
-            return Err(ApiError::BadRequest(errors))
+            return Err(ApiError::DataResponse(
+                400, "Error de validación", "errors", to_value(errors).unwrap())
+            )
         }
 
         Ok(())
