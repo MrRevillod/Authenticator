@@ -9,7 +9,7 @@ export const Navbar = () => {
     const location = useLocation()
     const isDashboardOrHome = location.pathname === "/" || location.pathname === "/dashboard"
 
-    const { isAuthenticated, user, useLogout } = useAuth()
+    const { isAuthenticated, useLogout } = useAuth()
 
     return (
 
@@ -57,7 +57,7 @@ export const Navbar = () => {
                         </div>
                         <ul tabIndex={0} className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-neutral-900 rounded-lg w-52">
                             {location !== "/dashboard" && (<li><Link to="/dashboard">Página principal</Link></li>)}
-                            <li><Link to="/profile">Mi perfíl</Link></li>
+                            <li><Link to="/account/profile">Mi perfíl</Link></li>
                             <li><Link onClick={useLogout}>Cerrar sesión</Link></li>
                         </ul>
                     </div>

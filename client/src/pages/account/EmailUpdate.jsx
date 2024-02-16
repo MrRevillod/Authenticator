@@ -4,7 +4,7 @@ import { Spinner } from "../../components/ui/Spinner.jsx"
 import { useUser } from "../../context/userContext.jsx"
 import { useEffect, useState } from "react"
 
-export const EmailUpdate = () => {
+export const EmailUpdatePage = () => {
 
     const [res, setRes] = useState({})
     const { useUpdateEmail, isLoading } = useUser()

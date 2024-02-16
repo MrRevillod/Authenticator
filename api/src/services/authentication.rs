@@ -34,7 +34,7 @@ pub async fn save_exp_token(token: &String,
     };
 
     let _ = tokens.insert_one(&token, None).await
-        .map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
+        .map_err(|_| Response::INTERNAL_SERVER_ERROR)?
     ;
 
     Ok(())
@@ -45,7 +45,7 @@ pub async fn is_exp_token(token: &String, db: &Database) -> ApiResult<bool> {
     let tokens: Collection<Token> = db.collection("exp_tokens");
 
     let query = tokens.find_one(doc! { "token": token }, None)
-        .await.map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
+        .await.map_err(|_| Response::INTERNAL_SERVER_ERROR)?
     ;
 
     match query {
@@ -59,7 +59,7 @@ pub async fn acc_validation_service(email: &String, url: &String) -> ApiResult<(
     let client = reqwest::Client::new();
     let body = json!({ "email": email, "url": url });
     let body_bytes = to_vec(&body)
-        .map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
+        .map_err(|_| Response::INTERNAL_SERVER_ERROR)?
     ;
 
     let url = format!("{}/email-verification", MAILER_SERVICE_URL.to_string());
@@ -71,7 +71,7 @@ pub async fn acc_validation_service(email: &String, url: &String) -> ApiResult<(
         .body(Body::from(body_bytes))
         .send()
         .await
-        .map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
+        .map_err(|_| Response::INTERNAL_SERVER_ERROR)?
     ;
 
     match response.status().as_u16() {
@@ -88,7 +88,7 @@ pub async fn new_session_token(refresh_token: &String, db: &Database) -> ApiResu
     let exp_tokens: Collection<Token> = db.collection("exp_tokens");
 
     let query = exp_tokens.find_one(doc! { "token": refresh_token }, None)
-        .await.map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
+        .await.map_err(|_| Response::INTERNAL_SERVER_ERROR)?
     ;
 
     if let Some(_) = query {

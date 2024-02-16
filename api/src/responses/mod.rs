@@ -16,17 +16,28 @@ use axum::{
     response::{IntoResponse, Response as AxumResponse}, 
 };
 
-// type for controllers / handlers responses
+/// `HttpResponse` tipo de dato que representa una respuesta HTTP.
+
 pub type HttpResponse = Result<ApiResponse, ApiResponse>;
 
-// type for services results
+/// `ApiResult` tipo de dato que representa una respuesta algún servicio en la API.
+/// 
+/// ### Parámetros
+/// 
+/// * `T`: Tipo de dato de la respuesta.
+/// 
+/// ### Ejemplo
+/// Retorna un tipo T si la respuesta es exitosa, 
+/// de lo contrario retorna un `ApiResponse` negativo, 
+/// o sea una HttpResponse de error.
+
 pub type ApiResult<T> = Result<T, ApiResponse>;
 
 pub enum ApiResponse {
     
     /// `Standard` es una respuesta estándar.
     /// 
-    /// # Parámetros
+    /// ### Parámetros
     /// 
     /// * `u16`: Código de estado HTTP.
     /// * `&'static str`: Mensaje de la respuesta.
@@ -35,7 +46,7 @@ pub enum ApiResponse {
 
     /// `DataResponse` es una respuesta que contiene datos.
     /// 
-    /// # Parámetros
+    /// ### Parámetros
     /// 
     /// * `u16`: Código de estado HTTP.
     /// * `&'static str`: Mensaje de la respuesta.

@@ -3,6 +3,10 @@ use super::ApiResponse;
 
 pub const SUCCESS: ApiResponse = ApiResponse::Standard(200, "Exito");
 
+pub const PASSWORD_RESET_SUCCESS: ApiResponse = ApiResponse::Standard(200, "Se ha actualizado tu contraseña.");
+
+pub const PASSWORD_RESET_REQUEST: ApiResponse = ApiResponse::Standard(200, "Se ha enviado un correo con las instrucciones para recuperar tu contraseña.");
+
 pub const EMAIL_UPDATE_SUCCESS: ApiResponse = ApiResponse::Standard(200, "Se ha actualizado tu correo");
 
 pub const REGISTER_SUCCESS:

@@ -1,12 +1,7 @@
 
 use axum::{
-    
-    middleware::{
-        from_fn as mw,
-        from_fn_with_state as mw_func,
-    },
-    
-    routing::{get, delete, patch, Router},
+    routing::{get, Router},
+    middleware::from_fn_with_state as mw_func,
 };
 
 use crate::{
@@ -16,7 +11,7 @@ use crate::{
     
     middlewares::{
         session::session_validation, 
-        validation::{is_valid_id, is_valid_id_and_token, owner_validation}
+        validation::is_valid_id,
     } 
 };
 
@@ -29,21 +24,5 @@ pub fn user_router(state: AppState) -> Router {
             .route_layer(mw_func(state.clone(), is_valid_id))
         )
         
-        .route("/:id", delete(delete_account)
-            .route_layer(mw(owner_validation))
-            .route_layer(mw_func(state.clone(), session_validation))
-            .route_layer(mw_func(state.clone(), is_valid_id))
-        )
-
-        .route("/:id", patch(update_profile)
-            .route_layer(mw(owner_validation))
-            .route_layer(mw_func(state.clone(), session_validation))
-            .route_layer(mw_func(state.clone(), is_valid_id))
-        )
-
-        .route("/update-email/:id/:token", get(update_email)
-            .route_layer(mw_func(state.clone(), is_valid_id_and_token)) 
-        )
-
-        .with_state(state)
+    .with_state(state)
 }

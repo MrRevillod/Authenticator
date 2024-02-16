@@ -1,5 +1,5 @@
 
-export const Dashboard = () => {
+export const DashboardPage = () => {
 
     return (
 

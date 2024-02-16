@@ -72,7 +72,7 @@ pub async fn session_validation(cookies: Cookies, State(state): ApiState,
     let filter = doc! { "_id": id };
 
     let user = users.find_one(filter, None).await
-        .map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
+        .map_err(|_| Response::INTERNAL_SERVER_ERROR)?
     ;
 
     match user {

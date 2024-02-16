@@ -1,5 +1,4 @@
 
-use futures::stream::TryStreamExt;
 use serde::{Deserialize, Serialize};
 
 use mongodb::{
@@ -21,7 +20,6 @@ pub struct UserModel {
     pub email: String,
     pub password: String,
     pub validated: bool,
-    pub tasks: Vec<ObjectId>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -51,26 +49,6 @@ impl UserModel {
         ;
 
         Ok(())
-    }
-    
-    #[allow(dead_code)]
-    pub async fn find_all(db: &Database) -> ApiResult<Vec<UserModel>> {
-        
-        let collection: Collection<UserModel> = db.collection("user");
-
-        let mut cursor = collection.find(None, None).await
-            .map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
-        ;
-
-        let mut users: Vec<UserModel> = Vec::new();
-
-        while let Some(user) = cursor.try_next().await
-            .map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
-        {
-            users.push(user);
-        }
-
-        Ok(users)
     }
 }
 

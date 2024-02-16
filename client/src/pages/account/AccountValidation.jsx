@@ -3,7 +3,7 @@ import { useAuth } from "../../context/authContext.jsx"
 import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 
-export const AccountValidation = () => {
+export const AccountValidationPage = () => {
 
     const navigate = useNavigate()
 

@@ -53,7 +53,7 @@ export const UserProvider = ({ children }) => {
 
             setIsLoading(true)
 
-            const res = await userServices.updateProfile(id, values)
+            const res = await userServices.updateAccount(id, values)
 
             useUserStore.setState({ user: res.data.user })
 

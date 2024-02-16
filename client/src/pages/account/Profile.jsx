@@ -1,10 +1,10 @@
 
-import { ProfileForm } from "../components/ProfileForm.jsx"
-import { useUserStore } from "../lib/store.js"
+import { ProfileForm } from "../../components/ProfileForm.jsx"
+import { useUserStore } from "../../lib/store.js"
 
-import "../index.css"
+import "../../index.css"
 
-export const Profile = () => {
+export const ProfilePage = () => {
 
     const user = useUserStore(state => state.user)
 

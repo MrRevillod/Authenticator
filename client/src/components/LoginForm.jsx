@@ -44,7 +44,7 @@ export const LoginForm = () => {
                 </h2>
 
                 <p className="text-center font-light text-neutral-300 text-sm">
-                    Disfruta la experiencia completa de TeamFlow.
+                    Disfruta la experiencia completa de Workflow.
                 </p>
             </div>
 
@@ -56,7 +56,6 @@ export const LoginForm = () => {
                     {...register('email')}
                     placeholder="john@domain.com"
                     error={errors.email ? (errors.email.message) : ""}
-
                 />
 
                 <Input
@@ -65,6 +64,7 @@ export const LoginForm = () => {
                     {...register('password')}
                     placeholder="●●●●●●●●●●"
                     error={errors.password ? (errors.password.message) : ""}
+                    islogin={true.toString()}
                 />
 
                 <button

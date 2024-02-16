@@ -33,7 +33,7 @@ pub async fn is_valid_id(State(state): ApiState, Path(id): Path<String>,
     };
 
     let query = users.find_one(doc! {"_id": oid}, None)
-        .await.map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
+        .await.map_err(|_| Response::INTERNAL_SERVER_ERROR)?
     ;
 
     if let None = query {

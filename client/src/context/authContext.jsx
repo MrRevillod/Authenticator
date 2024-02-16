@@ -55,8 +55,6 @@ export const AuthProvider = ({ children }) => {
 
             const res = await auth.registerRequest(formData)
 
-            setIsLoading(false)
-
             toast.success(res.data.message, {
                 duration: 5000,
                 style: { fontSize: "1rem" }
@@ -74,9 +72,9 @@ export const AuthProvider = ({ children }) => {
                 })
             }
 
-            setIsLoading(false)
             return error.response
-        }
+
+        } finally { setIsLoading(false) }
     }
 
     const useLogout = async () => {
@@ -88,7 +86,7 @@ export const AuthProvider = ({ children }) => {
             setIsAuthenticated(!(res.status === 200))
 
             toast.success(res.data.message, {
-                duration: 5000,
+                duration: 2000,
                 style: { fontSize: "1rem" }
             })
 
@@ -97,7 +95,7 @@ export const AuthProvider = ({ children }) => {
             setIsAuthenticated(false)
 
             toast.error("Sesión cerrada", {
-                duration: 3000,
+                duration: 2000,
                 style: { fontSize: "1rem" }
             })
 
@@ -105,6 +103,66 @@ export const AuthProvider = ({ children }) => {
             setIsLoading(false)
             useUserStore.setState({ user: null })
         }
+    }
+
+    const useRequestResetPassword = async (formData) => {
+
+        try {
+
+            setIsLoading(true)
+
+            const res = await auth.resetPasswordRequest(formData)
+
+            toast.success(res.data.message, {
+                duration: 5000,
+                style: { fontSize: "1rem" }
+            })
+
+        } catch (error) {
+
+            toast.error(error.response.data.message, {
+                duration: 5000,
+                style: { fontSize: "1rem" }
+            })
+
+        } finally { setIsLoading(false) }
+    }
+
+    const useResetPassword = async (id, token, formData) => {
+
+        try {
+
+            setIsLoading(true)
+            const res = await auth.resetPassword(id, token, formData)
+
+            toast.success(res.data.message, {
+                duration: 5000,
+                style: { fontSize: "1rem" }
+            })
+
+        } catch (error) {
+
+            toast.error(error.response.data.message, {
+                duration: 5000,
+                style: { fontSize: "1rem" }
+            })
+
+        } finally { setIsLoading(false) }
+
+    }
+
+    const useValidateResetPassword = async (id, token) => {
+
+        try {
+
+            setIsLoading(true)
+            return await auth.validateResetPassword(id, token)
+
+        } catch (error) {
+            return error.response
+
+        } finally { setIsLoading(false) }
+
     }
 
     const checkSession = async () => {
@@ -164,6 +222,9 @@ export const AuthProvider = ({ children }) => {
             isLoading,
             isCheckingSession,
             useValidateAccount,
+            useRequestResetPassword,
+            useValidateResetPassword,
+            useResetPassword,
             useLogin,
             useRegister,
             useLogout,

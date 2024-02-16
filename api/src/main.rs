@@ -12,7 +12,8 @@ use config::database::db_connection;
 
 use routes::{
     user::user_router,
-    authentication::auth_router
+    authentication::auth_router,
+    account::account_router,
 };
 
 use axum::{
@@ -67,6 +68,7 @@ async fn main() {
     let app = Router::new()
         .nest("/auth", auth_router(state.clone()))
         .nest("/users", user_router(state.clone()))
+        .nest("/account", account_router(state.clone()))
         .nest_service("/", static_service)
         .layer(cors)
         .layer(cookies)

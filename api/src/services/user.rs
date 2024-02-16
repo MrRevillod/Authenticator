@@ -8,11 +8,11 @@ use mongodb::{
 };
 
 use reqwest::Body;
-use serde_json::{json, to_value};
+use serde_json::json;
 
 use crate::{
-    models::user::UserModel, 
-    responses::{ApiResult, Response, ApiResponse},
+    models::{user::UserModel, ToJson},
+    responses::{ApiResponse, ApiResult, Response},
     config::state::{MAILER_API_KEY, MAILER_SERVICE_URL},
 };
 
@@ -22,7 +22,7 @@ pub async fn update_email_service(email: &String, url: &String) -> ApiResult<()>
     let body = json!({ "email": email, "url": url });
     
     let body_bytes = serde_json::to_vec(&body)
-        .map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
+        .map_err(|_| Response::INTERNAL_SERVER_ERROR)?
     ;
 
     let response = client
@@ -32,7 +32,7 @@ pub async fn update_email_service(email: &String, url: &String) -> ApiResult<()>
         .body(Body::from(body_bytes))
         .send()
         .await
-        .map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
+        .map_err(|_| Response::INTERNAL_SERVER_ERROR)?
     ;
 
     match response.status().as_u16() {
@@ -47,7 +47,6 @@ pub async fn update_email_service(email: &String, url: &String) -> ApiResult<()>
 pub async fn check_conflict_fields(db: &Database, body_map: &HashMap<String, String>) -> ApiResult<()> {
 
     let users: Collection<UserModel> = db.collection("users");
-
     let mut existing_fields = HashMap::new();
 
     if body_map.get("email").is_some() {
@@ -76,7 +75,7 @@ pub async fn check_conflict_fields(db: &Database, body_map: &HashMap<String, Str
 
     if !existing_fields.is_empty() {
         return Err(ApiResponse::DataResponse(
-            409, "Conflicto", "conflicts", to_value(existing_fields).unwrap())
+            409, "Conflicto", "conflicts", existing_fields.to_json())
         )
     }
 

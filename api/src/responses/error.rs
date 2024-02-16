@@ -2,7 +2,7 @@
 use super::ApiResponse;
 
 pub const RESOURCE_NOT_FOUND:
-    ApiResponse = ApiResponse::Standard(404, "Recursos no encontrado")
+    ApiResponse = ApiResponse::Standard(404, "URL inválida o expirada")
 ;
 
 pub const EXPIRED: 

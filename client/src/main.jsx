@@ -2,23 +2,25 @@
 import React from "react"
 import ReactDOM from "react-dom/client"
 
-import { BrowserRouter, Routes, Route } from "react-router-dom"
-
 import './index.css'
 
-import { Home } from "./pages/Home.jsx"
-import { Profile } from "./pages/Profile.jsx"
-import { Dashboard } from "./pages/Dashboard.jsx"
+import { HomePage } from "./pages/Home.jsx"
+import { DashboardPage } from "./pages/Dashboard.jsx"
+
 import { LoginPage } from "./pages/auth/Login.jsx"
-import { EmailUpdate } from "./pages/auth/EmailUpdate.jsx"
 import { RegisterPage } from "./pages/auth/Register.jsx"
-import { AccountValidation } from "./pages/auth/AccountValidation.jsx"
+
+import { ProfilePage } from "./pages/account/Profile.jsx"
+import { EmailUpdatePage } from "./pages/account/EmailUpdate.jsx"
+import { AccountValidationPage } from "./pages/account/AccountValidation.jsx"
 
 import { Toast } from "./components/ui/Toast.jsx"
 import { MainLayout } from "./layouts/MainLayout.jsx"
 import { UserProvider } from "./context/userContext.jsx"
 import { AuthProvider } from "./context/authContext.jsx"
 import { ProtectedRoute } from "./router.jsx"
+import { BrowserRouter, Routes, Route } from "react-router-dom"
+import { ForgotPasswordPage, ForgotPasswordRequestPage } from "./pages/auth/ResetPassword.jsx"
 
 const root = ReactDOM.createRoot(document.getElementById("root"))
 
@@ -27,39 +29,38 @@ root.render(
     <>
         <AuthProvider>
             <UserProvider>
-
                 <BrowserRouter>
                     <Routes>
 
-                        <Route path="/" element={<MainLayout><Home /></MainLayout>} />
+                        <Route path="/" element={<MainLayout><HomePage /></MainLayout>} />
                         <Route path="/auth/login" element={<LoginPage />} />
                         <Route path="/auth/register" element={<RegisterPage />} />
-                        <Route path="/auth/validate/:id/:token" element={<AccountValidation />} />
-                        <Route path="/users/change-email/:id/:token" element={<EmailUpdate />} />
+                        <Route path="/auth/reset-password" element={<MainLayout><ForgotPasswordRequestPage /></MainLayout>} />
+                        <Route path="/auth/reset-password/:id/:token" element={<MainLayout> <ForgotPasswordPage /></MainLayout>} />
+
+                        <Route path="/account/validate/:id/:token" element={<AccountValidationPage />} />
+                        <Route path="/account/update-email/:id/:token" element={<EmailUpdatePage />} />
 
                         <Route element={<ProtectedRoute />}>
 
                             <Route path="/dashboard" element={
                                 <MainLayout>
-                                    <Dashboard />
+                                    <DashboardPage />
                                 </MainLayout>
                             } />
 
-                            <Route path="/profile" element={
+                            <Route path="/account/profile" element={
                                 <MainLayout>
-                                    <Profile />
+                                    <ProfilePage />
                                 </MainLayout>
                             } />
 
                         </Route>
-
                     </Routes>
                 </BrowserRouter>
-
             </UserProvider>
         </AuthProvider>
 
         <Toast />
-
     </>
 )

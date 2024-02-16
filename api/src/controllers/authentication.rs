@@ -1,9 +1,8 @@
 
-use std::collections::HashMap;
-
-use serde_json::to_value;
+use serde_json::Value;
 use bcrypt::{verify, hash};
 use tower_cookies::Cookies;
+use std::{collections::HashMap, str::FromStr};
 use chrono::{Utc, Duration as ChronoDuration};
 
 use mongodb::{
@@ -11,16 +10,16 @@ use mongodb::{
 };
 
 use axum::{
-    extract::State, 
-    Json, Extension,
+    extract::{Path, State}, Extension, Json
 };
 
 use crate::{
     
     config::state::*, 
+
     models::{
-        validations::Validation,
         user::{UserModel, UserProfile}, 
+        validations::Validation, ToJson,
         authentication::{LoginData, PublicUserData}, 
     }, 
     responses::{
@@ -30,6 +29,7 @@ use crate::{
         cookies::new_cookie, 
         jwt::{decode_jwt, sign_jwt}, 
         user::check_conflict_fields,
+        account::reset_password_email_service, 
         authentication::{acc_validation_service, save_exp_token}, 
     }
 };
@@ -39,7 +39,7 @@ pub async fn login_controller(cookies: Cookies,
 
     let users: Collection<UserModel> = state.db.collection("users");
     let query = users.find_one(doc! { "email": &body.email}, None)
-        .await.map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
+        .await.map_err(|_| Response::INTERNAL_SERVER_ERROR)?
     ;
 
     let user = match query {
@@ -77,7 +77,7 @@ pub async fn login_controller(cookies: Cookies,
     };
 
     Ok(ApiResponse::DataResponse(
-        200, "Sesión iniciada", "user", to_value(profile).unwrap())
+        200, "Sesión iniciada", "user", profile.to_json())
     )
 }
 
@@ -101,11 +101,10 @@ pub async fn register_controller(State(state):
         email: body.email,
         password: hash(body.password, 7).unwrap(),
         validated: false,
-        tasks: Vec::new(),
     };
 
     let _ = users.insert_one(&user, None).await
-        .map_err(|_| return Response::INTERNAL_SERVER_ERROR)
+        .map_err(|_| Response::INTERNAL_SERVER_ERROR)
     ;
 
     let exp = Utc::now() + ChronoDuration::days(14);
@@ -121,33 +120,6 @@ pub async fn register_controller(State(state):
     let _ = acc_validation_service(&user.email, &url).await?;
 
     Ok(Response::REGISTER_SUCCESS)
-}
-
-pub async fn validate_account(State(state): ApiState, 
-    Extension(oid): Extension<ObjectId>, Extension(token): Extension<String>) -> HttpResponse {
-
-    let users: Collection<UserModel> = state.db.collection("users");
-    let filter = doc! {"_id": oid};
-
-    let query = users.find_one(filter, None).await
-        .map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
-    ;
-
-    let mut user = match query {
-        Some(user) => user,
-        None => return Err(Response::RESOURCE_NOT_FOUND)
-    };
-
-    let secret = format!("{}{}", &JWT_SECRET.to_string(), &user.validated.to_string());
-
-    if let Err(_) = decode_jwt(&token, &secret) {
-        return Err(Response::EXPIRED)
-    }
-
-    user.validated = true;
-    let _ = user.save(&state.db).await?;
-
-    Ok(Response::VALIDATION_SUCCESS)
 }
 
 pub async fn logout_controller(cookies: Cookies, 
@@ -183,11 +155,108 @@ pub async fn validate_session(
         email: user.email,
     };
 
-    Ok(ApiResponse::DataResponse(
-        200, "Sesión válida", "user", to_value(profile).unwrap())
-    )
+    Ok(ApiResponse::DataResponse(200, "Sesión válida", "user", profile.to_json()))
 }
 
-pub async fn protected() -> HttpResponse {
+pub async fn send_reset_password_email(State(state): ApiState, 
+    Json(body): Json<Value>) -> HttpResponse {
+
+    if !body.is_object() || body.get("email").is_none() {
+        return Err(Response::BAD_REQUEST)
+    }
+
+    let email = body.get("email").unwrap().as_str().unwrap();
+    let filter = doc! {"email": email};
+    let users: Collection<UserModel> = state.db.collection("users");
+
+    let query = users.find_one(filter, None).await
+        .map_err(|_| Response::INTERNAL_SERVER_ERROR)?
+    ;
+
+    let user = match query {
+        Some(user) => user,
+        None => return Err(Response::RESOURCE_NOT_FOUND)
+    };
+
+    let payload = (&user.id.to_hex(), &user.email);
+    let exp = Utc::now() + ChronoDuration::days(7);
+
+    let secret = format!("{}{}", JWT_SECRET.to_string(), &user.password);
+    let token = sign_jwt(payload, &secret, exp)?;
+
+    let recovery_url = format!("{}/auth/reset-password/{}/{}", 
+        *CLIENT_ADDR, &user.id.to_hex(), token
+    );
+
+    let _ = reset_password_email_service(&user.email, &recovery_url).await?;
+
+    Ok(Response::PASSWORD_RESET_REQUEST)
+}
+
+pub async fn reset_password_validation(State(state): ApiState,
+    Path((id, token)): Path<(String, String)>) -> HttpResponse {
+
+    let users: Collection<UserModel> = state.db.collection("users");
+
+    let oid = match ObjectId::from_str(&id) {
+        Ok(oid) => oid,
+        Err(_) => return Err(Response::BAD_REQUEST)
+    };
+
+    let query = users.find_one(doc! {"_id": oid}, None).await
+        .map_err(|_| Response::INTERNAL_SERVER_ERROR)?
+    ;
+
+    let user = match query {
+        Some(user) => user,
+        None => return Err(Response::RESOURCE_NOT_FOUND)
+    };
+
+    let secret = format!("{}{}", *JWT_SECRET, &user.password);
+    let _ = decode_jwt(&token, &secret)?;
+    
     Ok(Response::SUCCESS)
+}
+
+pub async fn reset_password(State(state): ApiState,
+    Path((id, token)): Path<(String, String)>, Json(body): Json<Value>) -> HttpResponse {
+
+    let condition = !body.is_object() || 
+        body.get("password").is_none() || 
+        body.get("confirmPassword").is_none()
+    ;
+
+    if condition {
+        return Err(Response::BAD_REQUEST)
+    }
+
+    let password = body.get("password").unwrap().as_str().unwrap();
+    let confirm_pwd = body.get("confirmPassword").unwrap().as_str().unwrap();
+    let password_mismatch = password != confirm_pwd;
+
+    if password_mismatch {
+        return Err(Response::BAD_REQUEST)
+    }
+
+    let users: Collection<UserModel> = state.db.collection("users");
+    let oid = match ObjectId::from_str(&id) {
+        Ok(oid) => oid,
+        Err(_) => return Err(Response::BAD_REQUEST)
+    };
+
+    let mut  user = match users.find_one(doc! { "_id": oid }, None).await {
+        Ok(Some(user)) => user,
+        Ok(None) => return Err(Response::RESOURCE_NOT_FOUND),
+        Err(_) => return Err(Response::INTERNAL_SERVER_ERROR)
+    };
+
+    let secret = format!("{}{}", *JWT_SECRET, &user.password);
+    let _ = decode_jwt(&token, &secret)?;
+
+    let new_password = hash(password, 7).unwrap();
+
+    user.password = new_password;
+    user.save(&state.db).await?;
+
+    Ok(Response::PASSWORD_RESET_SUCCESS)
 }
