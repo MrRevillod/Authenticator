@@ -74,6 +74,7 @@ pub async fn login_controller(cookies: Cookies,
         name: user.name,
         username: user.username,
         email: user.email,
+        profilePicture: user.profilePicture,
     };
 
     Ok(ApiResponse::DataResponse(
@@ -101,6 +102,7 @@ pub async fn register_controller(State(state):
         email: body.email,
         password: hash(body.password, 7).unwrap(),
         validated: false,
+        profilePicture: DEFAULT_PROFILE_PICTURE.to_string()
     };
 
     let _ = users.insert_one(&user, None).await
@@ -113,7 +115,7 @@ pub async fn register_controller(State(state):
     let payload = (&user.id.to_hex(), &user.email);
 
     let validation_token = sign_jwt(payload, &secret, exp)?;
-    let url = format!("{}/auth/validate/{}/{}", 
+    let url = format!("{}/account/validate/{}/{}", 
         &CLIENT_ADDR.to_string(), &user.id.to_hex(), &validation_token
     );
 
@@ -153,6 +155,7 @@ pub async fn validate_session(
         name: user.name,
         username: user.username,
         email: user.email,
+        profilePicture: user.profilePicture,
     };
 
     Ok(ApiResponse::DataResponse(200, "Sesión válida", "user", profile.to_json()))

@@ -18,5 +18,5 @@ app.use(express.urlencoded({ extended: true }))
 app.use(router)
 
 app.listen(MAILER_PORT, () => {
-    console.log(`Mailer service running on port: ${MAILER_PORT}`)
+    console.log(`📧 Mailer service running on port ${MAILER_PORT}`)
 })

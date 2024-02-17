@@ -37,6 +37,7 @@ pub async fn get_user(State(state): ApiState,
         name: user.name,
         username: user.username,
         email: user.email,
+        profilePicture: user.profilePicture,
     };
 
     Ok(ApiResponse::DataResponse(

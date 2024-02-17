@@ -11,6 +11,7 @@ use crate::responses::{
     ApiResult,
 };
 
+#[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UserModel {
     #[serde(rename = "_id")]
@@ -20,8 +21,10 @@ pub struct UserModel {
     pub email: String,
     pub password: String,
     pub validated: bool,
+    pub profilePicture: String,
 }
 
+#[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UserProfile {
     #[serde(rename = "_id")]
@@ -29,6 +32,7 @@ pub struct UserProfile {
     pub name: String,
     pub username: String,
     pub email: String,
+    pub profilePicture: String,
 }
 
 impl UserModel {

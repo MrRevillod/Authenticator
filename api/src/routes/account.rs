@@ -27,7 +27,9 @@ pub fn account_router(state: AppState) -> Router {
 
         // validate the recent created account
 
-        .route("/validate/:id/:token", post(validate_account))
+        .route("/validate/:id/:token", post(validate_account)
+            .route_layer(mw_func(state.clone(), is_valid_id_and_token))
+        )
 
         // Update profile data
         

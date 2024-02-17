@@ -144,6 +144,7 @@ pub async fn update_account(
         name: updated.name,
         username: updated.username,
         email: updated.email,
+        profilePicture: updated.profilePicture,
     };
 
     Ok(ApiResponse::DataResponse(200, 

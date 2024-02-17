@@ -1,5 +1,6 @@
 
 import { useAuth } from "../context/authContext.jsx"
+import { useUserStore } from "../lib/store.js"
 import { Link, useLocation } from "react-router-dom"
 
 import "../index.css"
@@ -10,6 +11,8 @@ export const Navbar = () => {
     const isDashboardOrHome = location.pathname === "/" || location.pathname === "/dashboard"
 
     const { isAuthenticated, useLogout } = useAuth()
+
+    const user = useUserStore((state) => state.user)
 
     return (
 
@@ -52,7 +55,7 @@ export const Navbar = () => {
                     <div className="dropdown dropdown-end">
                         <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar">
                             <div className="w-10 rounded-full">
-                                <img alt="Tailwind CSS Navbar component" src="/default-profile.png" />
+                                <img alt="Tailwind CSS Navbar component" src={user?.profilePicture} />
                             </div>
                         </div>
                         <ul tabIndex={0} className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-neutral-900 rounded-lg w-52">
