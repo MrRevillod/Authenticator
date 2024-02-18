@@ -53,5 +53,13 @@ pub fn account_router(state: AppState) -> Router {
             .route_layer(mw_func(state.clone(), is_valid_id))
         )
 
+        // update profile picture
+
+        .route("/profile-picture/:id", patch(update_profile_picture)
+            .route_layer(mw(owner_validation))
+            .route_layer(mw_func(state.clone(), session_validation))
+            .route_layer(mw_func(state.clone(), is_valid_id))
+        )
+
     .with_state(state)
 }

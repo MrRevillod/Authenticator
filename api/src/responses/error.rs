@@ -28,3 +28,11 @@ pub const ACCOUNT_NOT_VALIDATED:
 pub const INTERNAL_SERVER_ERROR: 
     ApiResponse = ApiResponse::Standard(500, "Error interno del servidor")
 ;
+
+pub const INVALID_MIME_TYPE: 
+    ApiResponse = ApiResponse::Standard(400, "Tipo de archivo inválido")
+;
+
+pub const INVALID_FILE_SIZE: 
+    ApiResponse = ApiResponse::Standard(400, "Tamaño de archivo inválido")
+;

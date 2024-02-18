@@ -42,14 +42,14 @@ impl UserModel {
         let users: Collection<UserModel> = db.collection("users");
         
         let serialized = to_bson(self)
-            .map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
+            .map_err(|_| Response::INTERNAL_SERVER_ERROR)?
         ;
     
         let filter = doc! { "_id": self.id };
         let update = doc! { "$set": serialized };
 
         let _ = users.update_one(filter, update, None).await
-            .map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
+            .map_err(|_| Response::INTERNAL_SERVER_ERROR)?
         ;
 
         Ok(())

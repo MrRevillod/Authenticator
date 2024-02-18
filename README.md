@@ -3,8 +3,13 @@
 
 ### Arquitectura basada en Microservicios
 
-![img](./arq_software.png)
+- **Rest API / API Gateway** - Autenticación, Usuarios y comunicación con los demás microservicios
+- **Mail Service** - Envío de correos electrónicos
+- **Storage Service** - Almacenamiento de archivos
 
+<div class="container">
+    <img src="./Arq.Software.png" alt="Arquitectura de Software" style="width: 60%; height: 10%;" />
+</div>
 
 ### Api Endpoints
 
@@ -25,6 +30,7 @@
 - **GET** /account/update-email/:id/:token - Validar nuevo email 
 - **DELETE** /account/:id - Eliminar cuenta
 - **POST** /account/validate/:id/:token - Validar cuenta creada recientemente
+- **PATCH** /account/profile-picture/:id - Actualizar foto de perfil
 
 #### Users
 

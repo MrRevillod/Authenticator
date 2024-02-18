@@ -8,6 +8,3 @@ api/.env
 
 */*/.shuttle-storage
 */*/Secrets*.toml
-
-storage/input/*.{png, jpg, jpeg, webp}
-storage/public/*.{png, jpg, jpeg, webp}

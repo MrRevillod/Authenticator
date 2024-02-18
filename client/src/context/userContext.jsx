@@ -58,7 +58,6 @@ export const UserProvider = ({ children }) => {
             useUserStore.setState({ user: res.data.user })
 
             toast.success(res.data.message, {
-                duration: 3000,
                 style: { fontSize: "1rem" }
             })
 
@@ -90,6 +89,8 @@ export const UserProvider = ({ children }) => {
 
             const res = await userServices.updateEmail(id, token)
 
+            useUserStore.setState({ user: res.data.user })
+
             values.isChanged = true
             values.message = res.data.message
 
@@ -106,6 +107,31 @@ export const UserProvider = ({ children }) => {
         }
     }
 
+    const useUpdateProfilePicture = async (id, formData, fileSize) => {
+
+        try {
+
+            setIsLoading(true)
+
+            const res = await userServices.updateProfilePicture(id, formData, fileSize)
+
+            useUserStore.setState({ user: res.data.user })
+
+            toast.success(res.data.message, {
+                duration: 3000,
+                style: { fontSize: "1rem" }
+            })
+
+        } catch (error) {
+
+            toast.error(error.response.data.message, {
+                duration: 3000,
+                style: { fontSize: "1rem" }
+            })
+
+        } finally { setIsLoading(false) }
+    }
+
     return (
 
         <userContext.Provider
@@ -115,6 +141,7 @@ export const UserProvider = ({ children }) => {
                 useUpdate,
                 useUpdateEmail,
                 useDeleteAccount,
+                useUpdateProfilePicture,
             }}
         >
             {children}
@@ -122,5 +149,4 @@ export const UserProvider = ({ children }) => {
         </userContext.Provider>
     )
 }
-
 

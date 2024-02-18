@@ -11,7 +11,7 @@ const DB_URI = process.env.DB_URI || "mongodb://localhost:27017"
 
 const INPUT_DIR = path.join(process.cwd(), "input")
 
-const MIME_TYPES = [".png", ".jpg", ".webp", ".jpeg"]
+const MIME_TYPES = ["image/png", "image/jpg", "image/jpeg", "image/webp"]
 
 export {
     API_URL, STORAGE_KEY,

@@ -8,17 +8,27 @@ use bcrypt::hash;
 use tower_cookies::Cookies;
 use std::collections::HashMap;
 use serde_json::{Value, from_value};
-use axum::{extract::State, Extension, Json};
 use chrono::{Utc, Duration as ChronoDuration};
+
+use reqwest::Client as HttpClient;
+use reqwest::multipart::{Form, Part};
+
+use axum::{
+    body::Bytes, extract::{Multipart, State,}, Extension, Json, http::HeaderMap,
+};
 
 use crate::{
     
     config::state::*, 
-    models::{
-        ToJson,
-        user::{UserModel, UserProfile}
+
+    responses::{
+        ApiResponse, HttpResponse, Response
     }, 
-    responses::{ApiResponse, HttpResponse, Response}, 
+    
+    models::{
+        user::{UserModel, UserProfile}, ToJson
+    }, 
+
     services::{
         cookies::new_cookie, 
         jwt::{decode_jwt, sign_jwt},
@@ -178,7 +188,107 @@ pub async fn update_email(State(state): ApiState,
     user.email = payload.email;
     user.save(&state.db).await?;
 
-    Ok(Response::EMAIL_UPDATE_SUCCESS)
+    let profile = UserProfile {
+        id: user.id.to_hex(),
+        name: user.name,
+        username: user.username,
+        email: user.email,
+        profilePicture: user.profilePicture,
+    };
+
+    Ok(ApiResponse::DataResponse(
+        200, "Tu email se ha actualizado", "user", profile.to_json())
+    )
 }
 
+pub async fn update_profile_picture(State(state): ApiState, 
+    Extension(mut user): Extension<UserModel>, 
+    headers: HeaderMap, mut multipart: Multipart) -> HttpResponse {
 
+    while let Some(field) = multipart.next_field().await.unwrap() {
+
+        let condition = field.name().unwrap() != "file" || 
+            field.content_type().is_none() ||
+            headers.get("content-length").is_none()
+        ;
+
+        if condition {
+            return Err(Response::BAD_REQUEST)
+        }
+
+        let content_length = headers.get("content-length")
+            .unwrap().to_str().unwrap().parse::<usize>().unwrap()
+        ;
+
+        if content_length > 2_000_000 {
+            return Err(Response::INVALID_FILE_SIZE)
+        }
+
+        #[allow(non_snake_case)]
+        let MIME_TYPES = vec!["image/png", "image/jpeg", "image/jpg", "image/webp"];
+        
+        let mime_type = field.content_type().unwrap().to_string();
+
+        if !MIME_TYPES.contains(&mime_type.as_str()) {
+            return Err(Response::INVALID_MIME_TYPE)
+        }
+
+        let file_ext = mime_type.split("/").collect::<Vec<&str>>().pop().unwrap();
+        let filename = format!("profile-picture.{}", file_ext);
+
+        let file = field.bytes().await.unwrap_or(Bytes::new());
+
+        if file.len() > 2_000_000 || file.len() == 0{
+            return Err(Response::INVALID_FILE_SIZE)
+        }
+
+        let form = Form::new()
+            .part("file", Part::bytes(file.to_vec())
+                .file_name(filename)
+                .mime_str(mime_type.as_str())
+                .unwrap()
+            )
+        ;
+            
+        let client = HttpClient::new();
+
+        let response = client.patch(format!("{}/upload", *STORAGE_SERVICE_URL))
+            .header("x-api-key", STORAGE_API_KEY.to_string())
+            .multipart(form)
+            .send()
+            .await
+            .map_err(|_| Response::INTERNAL_SERVER_ERROR)?
+        ;
+
+        if response.status().as_u16() != 200 {
+            return Err(Response::INTERNAL_SERVER_ERROR)
+        }
+
+        let data: Value = response.json().await
+            .map_err(|_| Response::INTERNAL_SERVER_ERROR)?
+        ;
+        
+        if data.get("url").is_none() {
+            return Err(Response::INTERNAL_SERVER_ERROR)
+        }
+
+        let url = data.get("url").unwrap().as_str().unwrap().to_string();
+
+        user.profilePicture = url;
+        user.save(&state.db).await?;
+
+        let profile = UserProfile {
+            id: user.id.to_hex(),
+            name: user.name,
+            username: user.username,
+            email: user.email,
+            profilePicture: user.profilePicture,
+        };
+
+        return Ok(ApiResponse::DataResponse(
+            200, "Foto de perfíl actualizada", "user", profile.to_json())
+        )
+    }
+
+    Ok(Response::SUCCESS)
+}

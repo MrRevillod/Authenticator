@@ -9,12 +9,16 @@ lazy_static! {
     pub static ref JWT_SECRET: String = env("JWT_SECRET").to_string();
     pub static ref SERVER_ADDR: String = format!("{}:{}", env("SERVER_IP"), env("SERVER_PORT")).to_string();
     pub static ref CLIENT_ADDR: String = format!("{}:{}", env("CLIENT_IP"), env("CLIENT_PORT")).to_string();
+
     pub static ref MAILER_SERVICE_URL: String = env("MAILER_SERVICE_URL").to_string();
     pub static ref MAILER_API_KEY: String = env("MAILER_API_KEY").to_string();
+
     pub static ref STORAGE_SERVICE_URL: String = env("STORAGE_SERVICE_URL").to_string();
-    pub static ref DEFAULT_PROFILE_PICTURE: String = format!("{}/pictures/default.webp", 
-        *STORAGE_SERVICE_URL
-    ).to_string();
+    pub static ref STORAGE_API_KEY: String = env("STORAGE_API_KEY").to_string();
+
+    pub static ref DEFAULT_PROFILE_PICTURE: String = format!(
+        "{}/pictures/default.webp", *STORAGE_SERVICE_URL).to_string()
+    ;
 }
 
 use super::env;

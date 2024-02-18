@@ -7,8 +7,6 @@ pub const PASSWORD_RESET_SUCCESS: ApiResponse = ApiResponse::Standard(200, "Se h
 
 pub const PASSWORD_RESET_REQUEST: ApiResponse = ApiResponse::Standard(200, "Se ha enviado un correo con las instrucciones para recuperar tu contraseña.");
 
-pub const EMAIL_UPDATE_SUCCESS: ApiResponse = ApiResponse::Standard(200, "Se ha actualizado tu correo");
-
 pub const REGISTER_SUCCESS:
     ApiResponse = ApiResponse::Standard(201, "Se ha registrado tu cuenta, verifica tu dirección decorreo para validarla")
 ;

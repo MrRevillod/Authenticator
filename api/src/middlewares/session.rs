@@ -78,7 +78,6 @@ pub async fn session_validation(cookies: Cookies, State(state): ApiState,
     match user {
         
         Some(user) => {
-
             req.extensions_mut().insert(user);
             req.extensions_mut().insert(token.unwrap());
         },

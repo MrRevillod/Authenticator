@@ -84,6 +84,8 @@ export const ProfileForm = () => {
 
             <div className={`flex flex-col justify-center mdpx-12 gap-5 w-full h-full ${isLoading ? "opacity-50" : ""}`}>
 
+                <ProfilePictureInput />
+
                 <form className="flex flex-col gap-5 h-11/12" onSubmit={handleSubmit(onSubmit)}>
 
                     <Input
@@ -94,23 +96,27 @@ export const ProfileForm = () => {
                         error={errors.name ? (errors.name.message) : ""}
                     />
 
-                    <Input
-                        label="Apodo"
-                        type="text"
-                        placeholder={user.username}
-                        {...register('username')}
-                        error={errors.username ? (errors.username.message) : ""}
-                    />
+                    <div className="flex flex-row gap-4 my-1">
 
-                    <Input
-                        label="Correo eléctronico"
-                        type="email"
-                        placeholder={user.email}
-                        {...register('email')}
-                        error={errors.email ? (errors.email.message) : ""}
-                    />
+                        <Input
+                            label="Correo eléctronico"
+                            type="email"
+                            placeholder={user.email}
+                            {...register('email')}
+                            error={errors.email ? (errors.email.message) : ""}
+                        />
 
-                    <div className="flex flex-row gap-4">
+                        <Input
+                            label="Apodo"
+                            type="text"
+                            placeholder={user.username}
+                            {...register('username')}
+                            error={errors.username ? (errors.username.message) : ""}
+                        />
+
+                    </div>
+
+                    <div className="flex flex-row gap-4 my-1">
 
                         <Input
                             label="Contraseña"
@@ -129,14 +135,12 @@ export const ProfileForm = () => {
                         />
                     </div>
 
-
                     <button
                         type="submit"
                         className="bg-neutral-100 text-neutral-950 rounded-lg p-2 font-bold mt-4"
                     >
                         Actualizar perfíl
                     </button>
-
 
                 </form>
 
@@ -156,5 +160,59 @@ export const ProfileForm = () => {
 
             </div>
         </div>
+    )
+}
+
+export const ProfilePictureInput = () => {
+
+    const { useUpdateProfilePicture } = useUser()
+    const { handleSubmit, register, reset } = useForm()
+
+    const user = useUserStore(state => state.user)
+
+    const onSubmit = async (formData) => {
+
+        const form = new FormData()
+        form.append("file", formData.file[0])
+
+        let fileSize = formData.file[0].size
+
+        if (fileSize > 2000000) {
+
+            toast.error("La imagen no puede pesar más de 2MB", {
+                duration: 3000,
+                style: { fontSize: "1rem" }
+            })
+
+            return
+        }
+
+        await useUpdateProfilePicture(user._id, form, fileSize)
+
+        reset()
+    }
+
+    return (
+
+        <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="w-full flex flex-row gap-2 justify-center items-end"
+        >
+            <Input
+                label="Subir foto de perfíl"
+                type="file"
+                placeholder="Subir foto de perfíl"
+                {...register('file')}
+            />
+
+            <button
+                type="submit"
+                className="bg-neutral-100 text-neutral-950 
+                    h-12 rounded-lg p-2 text-center font-semibold
+                "
+            >
+                Subir
+            </button>
+        </form>
     )
 }

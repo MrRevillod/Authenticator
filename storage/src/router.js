@@ -1,12 +1,10 @@
 
 import { Router } from "express"
-import { checkUserId, fileValidator } from "./middlewares.js"
+import { fileValidator } from "./middlewares.js"
 import { updateProfilePicture } from "./controllers.js"
 
 const router = Router()
 
-router.patch("/profile-picture/:id",
-    fileValidator, checkUserId, updateProfilePicture
-)
+router.patch("/upload", fileValidator, updateProfilePicture)
 
 export default router
