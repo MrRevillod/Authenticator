@@ -8,7 +8,7 @@
 - **Storage Service** - Almacenamiento de archivos
 
 <div class="container">
-    <img src="./Arq.Software.png" alt="Arquitectura de Software" style="width: 60%; height: 10%;" />
+    <img src="./Arq.Software.png" alt="Arquitectura de Software" style="width: 90%; height: 10%;" />
 </div>
 
 ### Api Endpoints
