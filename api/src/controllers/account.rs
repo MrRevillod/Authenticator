@@ -14,51 +14,38 @@ use reqwest::Client as HttpClient;
 use reqwest::multipart::{Form, Part};
 
 use axum::{
-    body::Bytes, extract::{Multipart, State,}, Extension, Json, http::HeaderMap,
+    body::Bytes, Extension, Json,
+    extract::{Multipart, State,}, http::HeaderMap,
 };
 
 use crate::{
     
-    config::state::*, 
-
+    config::state::*, models::{
+        user::{UserModel, UserProfile}, ToJson
+    }, 
     responses::{
         ApiResponse, HttpResponse, Response
     }, 
-    
-    models::{
-        user::{UserModel, UserProfile}, ToJson
-    }, 
-
     services::{
         cookies::new_cookie, 
-        jwt::{decode_jwt, sign_jwt},
-        user::{check_conflict_fields, update_email_service} 
-    },
+        jwt::{decode_jwt, sign_jwt}, 
+        user::{check_conflict_fields, find_user},
+        microservices::send_new_email_confirmation, 
+    }
 };
 
 pub async fn validate_account(State(state): ApiState, 
     Extension(oid): Extension<ObjectId>, Extension(token): Extension<String>) -> HttpResponse {
 
-    let users: Collection<UserModel> = state.db.collection("users");
-    let filter = doc! {"_id": oid};
-
-    let query = users.find_one(filter, None).await
-        .map_err(|_| Response::INTERNAL_SERVER_ERROR)?
-    ;
-
-    let mut user = match query {
-        Some(user) => user,
-        None => return Err(Response::RESOURCE_NOT_FOUND)
-    };
-
-    let secret = format!("{}{}", &JWT_SECRET.to_string(), &user.validated.to_string());
+    let mut user = find_user(&state.db, doc! { "_id": oid }).await?;
+    let secret = format!("{}{}", *JWT_SECRET, user.validated);
 
     if let Err(_) = decode_jwt(&token, &secret) {
         return Err(Response::EXPIRED)
     }
 
     user.validated = true;
-    let _ = user.save(&state.db).await?;
+    user.save(&state.db).await?;
 
     Ok(Response::VALIDATION_SUCCESS)
 }
@@ -75,11 +62,11 @@ pub async fn delete_account(cookies: Cookies, State(state): ApiState,
         return Err(Response::RESOURCE_NOT_FOUND);
     }
 
-    let session_cookie = new_cookie("token", "".to_string(), time::Duration::minutes(1));
-    let refresh_cookie = new_cookie("refresh", "".to_string(), time::Duration::minutes(1));
+    let session_cookie = new_cookie("token", None, "SESSION");
+    let refresh_cookie = new_cookie("refresh", None, "REFRESH");
 
-    let _ = cookies.remove(session_cookie);
-    let _ = cookies.remove(refresh_cookie);
+    cookies.remove(session_cookie);
+    cookies.remove(refresh_cookie);
 
     Ok(Response::SUCCESS)
 }
@@ -97,7 +84,7 @@ pub async fn update_account(
         .map_err(|_| Response::INTERNAL_SERVER_ERROR)?
     ;
 
-    let _ = check_conflict_fields(&state.db, &body_map).await?;
+    check_conflict_fields(&state.db, &body_map).await?;
 
     if let Some(pwd) = body_map.get("password") {
         let encrypted = hash(pwd, 7).unwrap();
@@ -133,11 +120,9 @@ pub async fn update_account(
 
         let token = sign_jwt(payload, &secret, exp)?;
 
-        let url = format!("{}/account/update-email/{}/{}", 
-            CLIENT_ADDR.to_string(), oid.to_hex(), token
-        );
+        let url = format!("{}/account/update-email/{}/{}", *CLIENT_ADDR, oid.to_hex(), token);
 
-        update_email_service(&email, &url).await?;
+        send_new_email_confirmation(&email, &url).await?;
         email_updated = true;
     }
 
@@ -157,8 +142,8 @@ pub async fn update_account(
         profilePicture: updated.profilePicture,
     };
 
-    Ok(ApiResponse::DataResponse(200, 
-        &response_msg, "user", profile.to_json())
+    Ok(ApiResponse::DataResponse(
+        200, &response_msg, "user", profile.to_json())
     )
 }
 
@@ -166,17 +151,8 @@ pub async fn update_email(State(state): ApiState,
     Extension(oid): Extension<ObjectId>, 
     Extension(token): Extension<String>) -> HttpResponse {
 
-    let users: Collection<UserModel> = state.db.collection("users");
     let filter = doc! {"_id": oid};
-
-    let query = users.find_one(filter, None).await
-        .map_err(|_| Response::INTERNAL_SERVER_ERROR)?
-    ;
-
-    let mut user = match query {
-        Some(user) => user,
-        None => return Err(Response::RESOURCE_NOT_FOUND)
-    };
+    let mut user = find_user(&state.db, filter).await?;
 
     let secret = format!("{}{}", JWT_SECRET.to_string(), &user.email);    
     let payload = decode_jwt(&token, &secret)?;

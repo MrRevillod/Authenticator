@@ -19,7 +19,10 @@ lazy_static! {
     pub static ref DEFAULT_PROFILE_PICTURE: String = format!(
         "{}/pictures/default.webp", *STORAGE_SERVICE_URL).to_string()
     ;
+
+    pub static ref EMPTY_STR: String = "".to_string();
 }
+
 
 use super::env;
 pub type ApiState = State<AppState>;

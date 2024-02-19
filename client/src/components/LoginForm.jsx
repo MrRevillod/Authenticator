@@ -44,7 +44,7 @@ export const LoginForm = () => {
                 </h2>
 
                 <p className="text-center font-light text-neutral-300 text-sm">
-                    Disfruta la experiencia completa de Workflow.
+                    Disfruta la experiencia completa de Authenticator.
                 </p>
             </div>
 

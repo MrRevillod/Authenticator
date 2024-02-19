@@ -5,6 +5,6 @@ import { updateProfilePicture } from "./controllers.js"
 
 const router = Router()
 
-router.patch("/upload", fileValidator, updateProfilePicture)
+router.post("/upload", fileValidator, updateProfilePicture)
 
 export default router

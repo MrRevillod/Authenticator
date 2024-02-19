@@ -33,6 +33,7 @@ pub type HttpResponse = Result<ApiResponse, ApiResponse>;
 
 pub type ApiResult<T> = Result<T, ApiResponse>;
 
+#[derive(Debug)]
 pub enum ApiResponse {
     
     /// `Standard` es una respuesta estándar.
@@ -50,8 +51,26 @@ pub enum ApiResponse {
     /// 
     /// * `u16`: Código de estado HTTP.
     /// * `&'static str`: Mensaje de la respuesta.
-    /// * `&'static str`: Tipo de los datos.
+    /// * `&'static str`: Nombre | key del Value.
     /// * `Value`: Los datos de la respuesta.
+    /// 
+    /// ### Ejemplo
+    /// 
+    /// ```rust
+    /// 
+    /// use serde_json::to_value;
+    /// 
+    /// let profile = UserProfile {
+    ///     id: some_id,
+    ///     name: "John Doe",
+    ///     username: "johndoe",
+    /// }
+    /// 
+    /// ApiResponse::DataResponse(
+    ///     200, "Inicio de sesión exitoso", "user", to_value(profile).unwrap()
+    /// )
+    /// 
+    /// ```
     
     DataResponse(u16, &'static str, &'static str, Value),
 }

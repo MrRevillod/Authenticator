@@ -10,7 +10,7 @@ export const RegisterPage = () => {
             <article className="w-1/2 h-full lg:flex items-center justify-center hidden auth-bg-img">
 
                 <h1 className="text-5xl font-bold text-neutral-100 text-center">
-                    Bienvenido a Workflow
+                    Bienvenido a Authenticator
                 </h1>
 
             </article>

@@ -1,10 +1,5 @@
 
-use std::str::FromStr;
-
-use mongodb::{
-    Collection,
-    bson::{doc, oid::ObjectId}, 
-};
+use mongodb::bson::{doc, oid::ObjectId};
 
 use axum::{
     
@@ -19,24 +14,17 @@ use axum::{
 use crate::{
     config::state::ApiState, 
     models::user::UserModel, 
-    responses::{ApiResponse as ApiError, Response}
+    services::user::{find_user, oid_from_str},
+    responses::{ApiResponse as ApiError, Response}, 
 };
 
 pub async fn is_valid_id(State(state): ApiState, Path(id): Path<String>, 
     mut req: Request, next: Next) -> Result<AxumResponse, ApiError> {
 
-    let users: Collection<UserModel> = state.db.collection("users");
+    let oid = oid_from_str(&id)?;
+    let user = find_user(&state.db, doc! { "_id": oid }).await;
 
-    let oid = match ObjectId::from_str(&id) {
-        Ok(oid) => oid,
-        Err(_) => return Err(Response::BAD_REQUEST)
-    };
-
-    let query = users.find_one(doc! {"_id": oid}, None)
-        .await.map_err(|_| Response::INTERNAL_SERVER_ERROR)?
-    ;
-
-    if let None = query {
+    if let Err(_) = user {
         return Err(Response::RESOURCE_NOT_FOUND)
     }
 
@@ -48,18 +36,10 @@ pub async fn is_valid_id_and_token(State(state): ApiState,
     Path((id, token)): Path<(String, String)>, 
     mut req: Request, next: Next) -> Result<AxumResponse, ApiError> {
 
-    let users: Collection<UserModel> = state.db.collection("users");
+    let oid = oid_from_str(&id)?;
+    let user = find_user(&state.db, doc! {"_id": oid}).await;
 
-    let oid = match ObjectId::from_str(&id) {
-        Ok(oid) => oid,
-        Err(_) => return Err(Response::BAD_REQUEST)
-    };
-
-    let query = users.find_one(doc! {"_id": oid}, None)
-        .await.map_err(|_| return Response::INTERNAL_SERVER_ERROR)?
-    ;
-
-    if let None = query {
+    if let Err(_) = user {
         return Err(Response::RESOURCE_NOT_FOUND)
     }
 

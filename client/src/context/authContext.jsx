@@ -172,7 +172,7 @@ export const AuthProvider = ({ children }) => {
             setIsLoading(true)
             setIsCheckingSession(true)
 
-            const res = await auth.ValidateSessionRequest()
+            const res = await auth.validateSessionRequest()
 
             setIsAuthenticated(res.status === 200)
             useUserStore.setState({ user: res.data.user })

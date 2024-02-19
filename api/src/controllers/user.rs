@@ -1,36 +1,19 @@
 
-use mongodb::{
-    Collection,
-    bson::{doc, oid::ObjectId}
-};
-
+use bson::{doc, oid::ObjectId};
 use axum::{extract::State, Extension};
 
 use crate::{
-    
     config::state::*, 
-
-    models::{
-        ToJson,
-        user::{UserModel, UserProfile}, 
-    }, 
-    responses::{
-        ApiResponse, HttpResponse, Response
-    }, 
+    services::user::find_user,
+    models::{user::UserProfile, ToJson}, 
+    responses::{ApiResponse, HttpResponse}, 
 };
 
 pub async fn get_user(State(state): ApiState, 
     Extension(oid): Extension<ObjectId>) -> HttpResponse {
 
-    let users: Collection<UserModel> = state.db.collection("users");
-    let query = users.find_one(doc! {"_id": oid}, None)
-        .await.map_err(|_| Response::INTERNAL_SERVER_ERROR)?
-    ;
-
-    let user = match query {
-        Some(user) => user,
-        None => return Err(Response::RESOURCE_NOT_FOUND)
-    };
+    let filter = doc! {"_id": oid};
+    let user = find_user(&state.db, filter).await?;
 
     let profile = UserProfile {
         id: user.id.to_hex(),

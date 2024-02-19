@@ -1,11 +1,6 @@
 
-use std::str::FromStr;
+use mongodb::bson::doc;
 use tower_cookies::Cookies;
-
-use mongodb::{
-    Collection,
-    bson::{doc, oid::ObjectId},
-};
 
 use axum::{
     middleware::Next,
@@ -14,26 +9,13 @@ use axum::{
 };
 
 use crate::{
-
-    models::user::UserModel,
-    
-    services::{
-        
-        jwt::decode_jwt,
-        cookies::new_cookie, 
-        
-        authentication::{
-            is_exp_token, 
-            new_session_token
-        }, 
-    },
-    
-    responses::{
-        Response,
-        ApiResponse as ApiError,
-    },
-    
     config::state::{ApiState, JWT_SECRET}, 
+    responses::{ApiResponse as ApiError, Response}, 
+    services::{
+        jwt::*,
+        cookies::new_cookie, 
+        user::{find_user, oid_from_str} 
+    }
 };
 
 pub async fn session_validation(cookies: Cookies, State(state): ApiState, 
@@ -41,7 +23,7 @@ pub async fn session_validation(cookies: Cookies, State(state): ApiState,
 
     let mut token = cookies.get("token").map(|cookie| cookie.value().to_string());
 
-    let payload_id = match &token {
+    let user_id = match &token {
         
         Some(token) => decode_jwt(&token, &JWT_SECRET)?.id,
         
@@ -52,38 +34,27 @@ pub async fn session_validation(cookies: Cookies, State(state): ApiState,
                 None => return Err(Response::UNAUTHORIZED)
             };
 
-            let new_token = new_session_token(&refresh_token, &state.db).await?;
-            let new_session_cookie = new_cookie("token", new_token.clone(), time::Duration::minutes(60));
+            let (new_token, user_id) = new_session_token(&state.db, &refresh_token).await?;
+            let session_cookie = new_cookie("token", Some(&new_token), "SESSION");
 
-            let _ = cookies.add(new_session_cookie);
-
-            let payload = decode_jwt(&new_token, &JWT_SECRET)?;
+            cookies.add(session_cookie);
 
             token = Some(new_token);
-            payload.id
+            user_id
         }
     };
 
-    let _ = is_exp_token(&token.clone().unwrap(), &state.db).await?;
+    check_token_exp(&state.db, &token.clone().unwrap()).await?;
 
-    let users: Collection<UserModel> = state.db.collection("users");
-    let id = ObjectId::from_str(&payload_id).unwrap();
+    let id = oid_from_str(&user_id)?;
+    let user = find_user(&state.db, doc! {"_id": id}).await;
 
-    let filter = doc! { "_id": id };
-
-    let user = users.find_one(filter, None).await
-        .map_err(|_| Response::INTERNAL_SERVER_ERROR)?
-    ;
-
-    match user {
-        
-        Some(user) => {
-            req.extensions_mut().insert(user);
-            req.extensions_mut().insert(token.unwrap());
-        },
-        
-        None => return Err(Response::UNAUTHORIZED)
+    if let Err(_) = user {
+        return Err(Response::UNAUTHORIZED)
     }
+
+    req.extensions_mut().insert(user.unwrap());
+    req.extensions_mut().insert(token.unwrap());
 
     Ok(next.run(req).await)
 }

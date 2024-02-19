@@ -11,6 +11,8 @@ use crate::responses::{
     ApiResult,
 };
 
+/// This struct store the complete user data
+/// this is NOT shared with the client but is used for the database
 #[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UserModel {
@@ -24,6 +26,8 @@ pub struct UserModel {
     pub profilePicture: String,
 }
 
+/// This struct store the public user data
+/// that can be shared with other users and with the client
 #[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UserProfile {
@@ -37,6 +41,8 @@ pub struct UserProfile {
 
 impl UserModel {
 
+    /// This method is an implementation of save functionality for the UserModel
+    /// it saves the user data to the database. Similar to the *schema.save()* mongoose method
     pub async fn save(&self, db: &Database) -> ApiResult<()> {
 
         let users: Collection<UserModel> = db.collection("users");

@@ -3,7 +3,6 @@ import { useAuth } from "../../context/authContext.jsx"
 import { Spinner } from "../../components/ui/Spinner.jsx"
 import { LoginForm } from "../../components/LoginForm.jsx"
 
-
 export const LoginPage = () => {
 
     const { isLoading } = useAuth()
@@ -17,7 +16,7 @@ export const LoginPage = () => {
             <article className="w-1/2 h-full lg:flex items-center justify-center hidden auth-bg-img">
 
                 <h1 className="text-5xl font-bold text-neutral-100 text-center">
-                    Bienvenido a Workflow
+                    Bienvenido a Authenticator
                 </h1>
 
             </article>

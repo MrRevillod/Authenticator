@@ -1,47 +1,37 @@
 
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
+use bson::{oid::ObjectId, Document};
 use mongodb::{
     Collection, 
     Database, 
     bson::doc
 };
 
-use reqwest::Body;
-use serde_json::json;
-
 use crate::{
     models::{user::UserModel, ToJson},
     responses::{ApiResponse, ApiResult, Response},
-    config::state::{MAILER_API_KEY, MAILER_SERVICE_URL},
 };
 
-pub async fn update_email_service(email: &String, url: &String) -> ApiResult<()> {
+pub fn oid_from_str(oid: &String) -> ApiResult<ObjectId> {
 
-    let client = reqwest::Client::new();
-    let body = json!({ "email": email, "url": url });
-    
-    let body_bytes = serde_json::to_vec(&body)
-        .map_err(|_| Response::INTERNAL_SERVER_ERROR)?
-    ;
-
-    let response = client
-        .post(format!("{}/email-change", MAILER_SERVICE_URL.to_string()))
-        .header("Content-Type", "application/json")
-        .header("x-api-key", MAILER_API_KEY.to_string())
-        .body(Body::from(body_bytes))
-        .send()
-        .await
-        .map_err(|_| Response::INTERNAL_SERVER_ERROR)?
-    ;
-
-    match response.status().as_u16() {
-        200 => (),
-        400 => return Err(Response::BAD_REQUEST),
-        _ => return Err(Response::INTERNAL_SERVER_ERROR)
+    match ObjectId::from_str(oid) {
+        Ok(oid) => Ok(oid),
+        Err(_) => Err(Response::BAD_REQUEST)
     }
+}
 
-    Ok(())
+pub async fn find_user(db: &Database, filter: Document) -> ApiResult<UserModel> {
+
+    let users: Collection<UserModel> = db.collection("users");
+    let user = users.find_one(filter, None).await
+        .map_err(|_| Response::INTERNAL_SERVER_ERROR)?
+    ;
+
+    match user {
+        Some(user) => Ok(user),
+        None => Err(Response::RESOURCE_NOT_FOUND)
+    }
 }
 
 pub async fn check_conflict_fields(db: &Database, body_map: &HashMap<String, String>) -> ApiResult<()> {

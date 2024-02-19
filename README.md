@@ -8,7 +8,7 @@
 - **Storage Service** - Almacenamiento de archivos
 
 <div class="container">
-    <img src="./Arq.Software.png" alt="Arquitectura de Software" style="width: 90%; height: 10%;" />
+    <img src="./Arq.Software.png" alt="Arquitectura de Software" style="width: 100%;" />
 </div>
 
 ### Api Endpoints
@@ -35,4 +35,9 @@
 #### Users
 
 - **GET** /users/:id - Obtener información pública de un usuario
+
+### TODO
+
+- [x] Crear sistema de contenedores y orquestación con Docker y Docker Compose
+- [x] Reemplazar el microservicio de storage por un servicio de almacenamiento en la nube (AWS S3)
 

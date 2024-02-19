@@ -11,7 +11,7 @@ export const ProtectedRoute = () => {
         return <Loading />
     }
 
-    if (isLoading || isAuthenticated === false) {
+    if (isLoading || !isAuthenticated) {
         return <Navigate to="/auth/login" replace />
     }
 

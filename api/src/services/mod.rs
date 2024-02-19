@@ -1,6 +1,6 @@
 
 pub mod jwt;
+pub mod microservices;
 pub mod user;
-pub mod account;
 pub mod cookies;
-pub mod authentication;
+pub mod reqwest;

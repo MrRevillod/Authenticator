@@ -2,7 +2,7 @@
 use serde_json::Value;
 use bcrypt::{verify, hash};
 use tower_cookies::Cookies;
-use std::{collections::HashMap, str::FromStr};
+use std::collections::HashMap;
 use chrono::{Utc, Duration as ChronoDuration};
 
 use mongodb::{
@@ -18,34 +18,25 @@ use crate::{
     config::state::*, 
 
     models::{
-        user::{UserModel, UserProfile}, 
-        validations::Validation, ToJson,
-        authentication::{LoginData, PublicUserData}, 
+        authentication::{LoginData, RegisterData}, 
+        user::{UserModel, UserProfile}, validations::Validation, ToJson 
     }, 
     responses::{
         ApiResponse, HttpResponse, Response
     }, 
     services::{
         cookies::new_cookie, 
-        jwt::{decode_jwt, sign_jwt}, 
-        user::check_conflict_fields,
-        account::reset_password_email_service, 
-        authentication::{acc_validation_service, save_exp_token}, 
+        jwt::{decode_jwt, save_exp_token, sign_jwt}, 
+        microservices::{send_acc_validation_email, send_recovery_email}, 
+        user::{check_conflict_fields, find_user, oid_from_str}
     }
 };
 
 pub async fn login_controller(cookies: Cookies, 
     State(state): ApiState, Json(body): Json<LoginData>) -> HttpResponse {
 
-    let users: Collection<UserModel> = state.db.collection("users");
-    let query = users.find_one(doc! { "email": &body.email}, None)
-        .await.map_err(|_| Response::INTERNAL_SERVER_ERROR)?
-    ;
-
-    let user = match query {
-        Some(user) => user,
-        None => return Err(Response::INVALID_CREDENTIALS)
-    };
+    let filter = doc! { "email": &body.email };
+    let user = find_user(&state.db, filter).await?;
 
     if !verify(&body.password, &user.password).unwrap() {
         return Err(Response::INVALID_CREDENTIALS)
@@ -63,11 +54,11 @@ pub async fn login_controller(cookies: Cookies,
     let token = sign_jwt(payload.clone(), &JWT_SECRET, session_exp)?;
     let refresh = sign_jwt(payload, &JWT_SECRET, refresh_exp)?;
 
-    let session_cookie = new_cookie("token", token, time::Duration::minutes(60));
-    let refresh_cookie = new_cookie("refresh", refresh, time::Duration::days(7));
+    let session_cookie = new_cookie("token", Some(&token), "SESSION");
+    let refresh_cookie = new_cookie("refresh", Some(&refresh), "REFRESH");
 
-    let _ = cookies.add(session_cookie);
-    let _ = cookies.add(refresh_cookie);
+    cookies.add(session_cookie);
+    cookies.add(refresh_cookie);
 
     let profile = UserProfile {
         id: user.id.to_hex(),
@@ -83,7 +74,7 @@ pub async fn login_controller(cookies: Cookies,
 }
 
 pub async fn register_controller(State(state): 
-    ApiState, Json(body): Json<PublicUserData>) -> HttpResponse {
+    ApiState, Json(body): Json<RegisterData>) -> HttpResponse {
 
     let users: Collection<UserModel> = state.db.collection("users");
     body.validate()?;
@@ -93,7 +84,7 @@ pub async fn register_controller(State(state):
     conflict_map.insert("username".to_string(), body.username.clone());
     conflict_map.insert("email".to_string(), body.email.clone());
 
-    let _ = check_conflict_fields(&state.db, &conflict_map).await?;
+    check_conflict_fields(&state.db, &conflict_map).await?;
 
     let user = UserModel {
         id: ObjectId::new(),
@@ -105,21 +96,21 @@ pub async fn register_controller(State(state):
         profilePicture: DEFAULT_PROFILE_PICTURE.to_string()
     };
 
-    let _ = users.insert_one(&user, None).await
-        .map_err(|_| Response::INTERNAL_SERVER_ERROR)
+    users.insert_one(&user, None).await
+        .map_err(|_| Response::INTERNAL_SERVER_ERROR)?
     ;
 
     let exp = Utc::now() + ChronoDuration::days(14);
-    let secret = format!("{}{}", &JWT_SECRET.to_string(), &user.validated.to_string());
+    let secret = format!("{}{}", *JWT_SECRET, user.validated);
 
     let payload = (&user.id.to_hex(), &user.email);
-
     let validation_token = sign_jwt(payload, &secret, exp)?;
+    
     let url = format!("{}/account/validate/{}/{}", 
-        &CLIENT_ADDR.to_string(), &user.id.to_hex(), &validation_token
+        *CLIENT_ADDR, user.id.to_hex(), validation_token
     );
 
-    let _ = acc_validation_service(&user.email, &url).await?;
+    send_acc_validation_email(&user.email, &url).await?;
 
     Ok(Response::REGISTER_SUCCESS)
 }
@@ -128,21 +119,23 @@ pub async fn logout_controller(cookies: Cookies,
     State(state): ApiState, Extension(token): Extension<String>, 
     Extension(user): Extension<UserModel>) -> HttpResponse {
 
-    let refresh_cookie = cookies.get("refresh").map(|cookie| cookie.value().to_string());
+    let refresh_cookie = cookies.get("refresh")
+        .map(|cookie| cookie.value().to_string())
+    ;
 
     let refresh_token = match refresh_cookie {
         Some(refresh_token) => refresh_token,
         None => return Err(Response::UNAUTHORIZED)
     };
 
-    let _ = save_exp_token(&token, user.id, &state.db).await?;
-    let _ = save_exp_token(&refresh_token, user.id, &state.db).await?;
+    save_exp_token(&state.db, &token, user.id).await?;
+    save_exp_token(&state.db, &refresh_token, user.id).await?;
 
-    let session_cookie = new_cookie("token", "".to_string(), time::Duration::minutes(1));
-    let refresh_cookie = new_cookie("refresh", "".to_string(), time::Duration::minutes(1));
+    let session_cookie = new_cookie("token", None, "SESSION");
+    let refresh_cookie = new_cookie("refresh", None, "REFRESH");
 
-    let _ = cookies.remove(session_cookie);
-    let _ = cookies.remove(refresh_cookie);
+    cookies.remove(session_cookie);
+    cookies.remove(refresh_cookie);
 
     Ok(Response::LOGOUT_SUCCESS)
 }
@@ -158,7 +151,9 @@ pub async fn validate_session(
         profilePicture: user.profilePicture,
     };
 
-    Ok(ApiResponse::DataResponse(200, "Sesión válida", "user", profile.to_json()))
+    Ok(ApiResponse::DataResponse(
+        200, "Sesión válida", "user", profile.to_json())
+    )
 }
 
 pub async fn send_reset_password_email(State(state): ApiState, 
@@ -169,17 +164,7 @@ pub async fn send_reset_password_email(State(state): ApiState,
     }
 
     let email = body.get("email").unwrap().as_str().unwrap();
-    let filter = doc! {"email": email};
-    let users: Collection<UserModel> = state.db.collection("users");
-
-    let query = users.find_one(filter, None).await
-        .map_err(|_| Response::INTERNAL_SERVER_ERROR)?
-    ;
-
-    let user = match query {
-        Some(user) => user,
-        None => return Err(Response::RESOURCE_NOT_FOUND)
-    };
+    let user = find_user(&state.db, doc! { "email": email }).await?;
 
     let payload = (&user.id.to_hex(), &user.email);
     let exp = Utc::now() + ChronoDuration::days(7);
@@ -188,10 +173,10 @@ pub async fn send_reset_password_email(State(state): ApiState,
     let token = sign_jwt(payload, &secret, exp)?;
 
     let recovery_url = format!("{}/auth/reset-password/{}/{}", 
-        *CLIENT_ADDR, &user.id.to_hex(), token
+        *CLIENT_ADDR, user.id.to_hex(), token
     );
 
-    let _ = reset_password_email_service(&user.email, &recovery_url).await?;
+    send_recovery_email(&user.email, &recovery_url).await?;
 
     Ok(Response::PASSWORD_RESET_REQUEST)
 }
@@ -199,24 +184,11 @@ pub async fn send_reset_password_email(State(state): ApiState,
 pub async fn reset_password_validation(State(state): ApiState,
     Path((id, token)): Path<(String, String)>) -> HttpResponse {
 
-    let users: Collection<UserModel> = state.db.collection("users");
-
-    let oid = match ObjectId::from_str(&id) {
-        Ok(oid) => oid,
-        Err(_) => return Err(Response::BAD_REQUEST)
-    };
-
-    let query = users.find_one(doc! {"_id": oid}, None).await
-        .map_err(|_| Response::INTERNAL_SERVER_ERROR)?
-    ;
-
-    let user = match query {
-        Some(user) => user,
-        None => return Err(Response::RESOURCE_NOT_FOUND)
-    };
-
-    let secret = format!("{}{}", *JWT_SECRET, &user.password);
-    let _ = decode_jwt(&token, &secret)?;
+    let oid = oid_from_str(&id)?;
+    let user = find_user(&state.db, doc! { "_id": oid }).await?;
+    
+    let secret = format!("{}{}", *JWT_SECRET, user.password);
+    decode_jwt(&token, &secret)?;
     
     Ok(Response::SUCCESS)
 }
@@ -241,20 +213,12 @@ pub async fn reset_password(State(state): ApiState,
         return Err(Response::BAD_REQUEST)
     }
 
-    let users: Collection<UserModel> = state.db.collection("users");
-    let oid = match ObjectId::from_str(&id) {
-        Ok(oid) => oid,
-        Err(_) => return Err(Response::BAD_REQUEST)
-    };
-
-    let mut  user = match users.find_one(doc! { "_id": oid }, None).await {
-        Ok(Some(user)) => user,
-        Ok(None) => return Err(Response::RESOURCE_NOT_FOUND),
-        Err(_) => return Err(Response::INTERNAL_SERVER_ERROR)
-    };
+    let oid = oid_from_str(&id)?;
+    let mut user = find_user(&state.db, doc! { "_id": oid }).await?;
 
     let secret = format!("{}{}", *JWT_SECRET, &user.password);
-    let _ = decode_jwt(&token, &secret)?;
+    
+    decode_jwt(&token, &secret)?;
 
     let new_password = hash(password, 7).unwrap();
 

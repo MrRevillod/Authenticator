@@ -3,7 +3,7 @@ use regex::Regex;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 
-use super::{authentication::PublicUserData, ToJson};
+use super::{authentication::RegisterData, ToJson};
 
 use crate::responses::{
     ApiResult,
@@ -32,7 +32,7 @@ pub trait Validation {
     fn validate(&self) -> ApiResult<()>;
 }
 
-impl Validation for PublicUserData {
+impl Validation for RegisterData {
     
     fn validate(&self) -> ApiResult<()> {
 
